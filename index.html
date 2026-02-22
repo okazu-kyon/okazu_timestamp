@@ -3,33 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>救急STAMP V1.1.8</title>
+    <title>救急STAMP V1.2.0</title>
     <style>
         body { font-family: -apple-system, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; text-align: center; }
-        .card { border: 2px solid #444; border-radius: 20px; padding: 20px; background: #111; max-width: 400px; margin: auto; }
-        .timer { font-size: 4.5rem; font-weight: bold; margin: 10px 0; font-family: 'Courier New', monospace; color: #00ff00; }
+        .card { border: 2px solid #444; border-radius: 20px; padding: 25px; background: #111; max-width: 400px; margin: auto; }
+        .timer { font-size: 4.5rem; font-weight: bold; margin: 15px 0; font-family: 'Courier New', monospace; color: #00ff00; }
         button { width: 100%; padding: 20px; margin: 10px 0; font-size: 1.4rem; border: none; border-radius: 15px; cursor: pointer; font-weight: bold; }
         .btn-start { background: #28a745; color: white; }
-        #logList { margin-top: 20px; text-align: left; height: 250px; overflow-y: auto; background: #222; padding: 10px; border-radius: 10px; }
-        .log-item { border-bottom: 1px solid #333; padding: 12px 0; display: flex; justify-content: space-between; font-size: 1.2rem; }
+        #logList { margin-top: 20px; text-align: left; height: 300px; overflow-y: auto; background: #222; padding: 10px; border-radius: 10px; }
+        .log-item { border-bottom: 1px solid #333; padding: 12px 0; display: flex; justify-content: space-between; font-size: 1.3rem; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div style="font-size: 0.9rem; color: #aaa;">救急記録 V1.1.8 (干渉防止版)</div>
     <div id="timer" class="timer">00:00:00</div>
-    <button id="startBtn" class="btn-start" onclick="startApp()">▶ 録音・リモコン開始</button>
+    <button id="startBtn" class="btn-start" onclick="startApp()">▶ 記録開始（通信維持モード）</button>
     <div id="logList"></div>
 </div>
 
-<audio id="silentMode" loop playsinline>
-    <source src="https://raw.githubusercontent.com/anars/blank-audio/master/10-seconds-of-silence.mp3" type="audio/mp3">
-</audio>
+<audio id="stayAlive" loop playsinline src="https://raw.githubusercontent.com/anars/blank-audio/master/1-minute-of-silence.mp3"></audio>
 
 <script>
     let recorder, chunks = [], startTime, timerId;
-    const audio = document.getElementById('silentMode');
+    const audio = document.getElementById('stayAlive');
 
     function addLog(msg) {
         const now = new Date();
@@ -41,7 +38,10 @@
         
         // 視覚フィードバック
         document.body.style.background = "#fff";
-        setTimeout(() => document.body.style.background = "#000", 100);
+        setTimeout(() => document.body.style.background = "#000", 80);
+        
+        // 操作のたびに再生を再トリガーして接続を維持
+        audio.play();
     }
 
     async function startApp() {
@@ -51,10 +51,11 @@
             recorder.ondataavailable = e => chunks.push(e.data);
             recorder.start();
 
-            // 強制再生で主導権を握る
-            audio.play().then(() => {
-                setupRemote();
-            }).catch(e => alert("再生エラー: " + e));
+            // iPhoneで確実に音声を流す
+            audio.volume = 0.1; 
+            audio.play();
+
+            setupRemote();
 
             startTime = new Date();
             timerId = setInterval(updateTimer, 1000);
@@ -66,21 +67,26 @@
     function setupRemote() {
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
-                title: '救急現場記録中',
-                artist: 'リモコン独占モード',
-                album: 'V1.1.8'
+                title: '救急現場記録：アクティブ',
+                artist: 'リモコン接続中...',
+                album: 'V1.2.0'
             });
 
-            const actionHandler = (type) => {
-                addLog(type === 'next' ? "処置(+)" : type === 'prev' ? "処置(-)" : "ボタン");
-                // ミュージックアプリへの切り替わりを防ぐため再生状態を維持
-                audio.play(); 
-            };
+            // 重要な変更：全ての操作を拾う
+            const actions = [
+                ['play', 'ボタン押下'],
+                ['pause', 'ボタン押下'],
+                ['nexttrack', '処置(+)'],
+                ['previoustrack', '処置(-)']
+            ];
 
-            navigator.mediaSession.setActionHandler('nexttrack', () => actionHandler('next'));
-            navigator.mediaSession.setActionHandler('previoustrack', () => actionHandler('prev'));
-            navigator.mediaSession.setActionHandler('play', () => actionHandler('play'));
-            navigator.mediaSession.setActionHandler('pause', () => actionHandler('pause'));
+            actions.forEach(([action, label]) => {
+                navigator.mediaSession.setActionHandler(action, () => {
+                    addLog(label);
+                    // ボタンが押されたらSafariに「まだ音を出してるぞ」と再認識させる
+                    audio.play();
+                });
+            });
         }
     }
 
