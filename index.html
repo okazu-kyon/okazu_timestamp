@@ -3,40 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>救急STAMP V1.1.7</title>
+    <title>救急STAMP V1.1.8</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; text-align: center; overflow: hidden; }
+        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; text-align: center; }
         .card { border: 2px solid #444; border-radius: 20px; padding: 20px; background: #111; max-width: 400px; margin: auto; }
         .timer { font-size: 4.5rem; font-weight: bold; margin: 10px 0; font-family: 'Courier New', monospace; color: #00ff00; }
         button { width: 100%; padding: 20px; margin: 10px 0; font-size: 1.4rem; border: none; border-radius: 15px; cursor: pointer; font-weight: bold; }
         .btn-start { background: #28a745; color: white; }
-        .btn-stop { background: #dc3545; color: white; }
-        #logList { margin-top: 20px; text-align: left; height: 200px; overflow-y: auto; background: #222; padding: 10px; border-radius: 10px; font-size: 1.2rem; }
-        .log-item { border-bottom: 1px solid #333; padding: 8px 0; display: flex; justify-content: space-between; }
-        .debug-msg { font-size: 0.7rem; color: #666; margin-top: 10px; }
+        #logList { margin-top: 20px; text-align: left; height: 250px; overflow-y: auto; background: #222; padding: 10px; border-radius: 10px; }
+        .log-item { border-bottom: 1px solid #333; padding: 12px 0; display: flex; justify-content: space-between; font-size: 1.2rem; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div style="font-size: 0.9rem; color: #aaa;">救急活動記録 Ver 1.1.7</div>
+    <div style="font-size: 0.9rem; color: #aaa;">救急記録 V1.1.8 (干渉防止版)</div>
     <div id="timer" class="timer">00:00:00</div>
-    
     <button id="startBtn" class="btn-start" onclick="startApp()">▶ 録音・リモコン開始</button>
-    <button id="stopBtn" class="btn-stop" onclick="stopApp()" style="display:none;">■ 停止・保存</button>
-
-    <div id="logList">
-        <div style="color:#666; font-size:0.9rem;">ここに記録が表示されます</div>
-    </div>
-    
-    <div class="debug-msg" id="debug">システム待機中...</div>
+    <div id="logList"></div>
 </div>
 
-<audio id="silentMode" loop playsinline src="https://raw.githubusercontent.com/anars/blank-audio/master/10-seconds-of-silence.mp3"></audio>
+<audio id="silentMode" loop playsinline>
+    <source src="https://raw.githubusercontent.com/anars/blank-audio/master/10-seconds-of-silence.mp3" type="audio/mp3">
+</audio>
 
 <script>
     let recorder, chunks = [], startTime, timerId;
-    const debugDiv = document.getElementById('debug');
+    const audio = document.getElementById('silentMode');
 
     function addLog(msg) {
         const now = new Date();
@@ -44,60 +37,50 @@
         const item = document.createElement('div');
         item.className = 'log-item';
         item.innerHTML = `<span><b>${msg}</b></span><span style="color:#0f0">${time}</span>`;
-        const list = document.getElementById('logList');
-        if (list.firstChild && list.firstChild.style) list.firstChild.style.color = "#fff";
-        list.prepend(item);
+        document.getElementById('logList').prepend(item);
         
-        // 視覚フィードバック（iPhoneの画面全体を一瞬白くして操作感を与える）
-        document.body.style.background = "#555";
+        // 視覚フィードバック
+        document.body.style.background = "#fff";
         setTimeout(() => document.body.style.background = "#000", 100);
     }
 
     async function startApp() {
         try {
-            debugDiv.textContent = "マイク準備中...";
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             recorder = new MediaRecorder(stream);
             recorder.ondataavailable = e => chunks.push(e.data);
-            recorder.onstop = exportAudio;
             recorder.start();
 
-            // 音声再生開始
-            const audio = document.getElementById('silentMode');
-            audio.play();
+            // 強制再生で主導権を握る
+            audio.play().then(() => {
+                setupRemote();
+            }).catch(e => alert("再生エラー: " + e));
 
             startTime = new Date();
             timerId = setInterval(updateTimer, 1000);
-
             document.getElementById('startBtn').style.display = 'none';
-            document.getElementById('stopBtn').style.display = 'block';
-
-            setupRemoteControl();
             addLog("記録開始");
-            debugDiv.textContent = "リモコン待機中（音量長押しでスタンプ）";
-        } catch (e) {
-            alert("エラー: " + e);
-            debugDiv.textContent = "起動失敗: " + e;
-        }
+        } catch (e) { alert("マイクを許可してください"); }
     }
 
-    function setupRemoteControl() {
+    function setupRemote() {
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
-                title: '救急現場記録 Ver 1.1.7',
-                artist: '音量長押しでスタンプ記録'
+                title: '救急現場記録中',
+                artist: 'リモコン独占モード',
+                album: 'V1.1.8'
             });
 
-            // イヤホンの「次へ(＋長押し)」「前へ(ー長押し)」に反応
-            navigator.mediaSession.setActionHandler('nexttrack', () => addLog("処置(+)"));
-            navigator.mediaSession.setActionHandler('previoustrack', () => addLog("処置(-)"));
-            
-            // 再生・一時停止もスタンプにする（iPhone用）
-            navigator.mediaSession.setActionHandler('play', () => addLog("ボタン押下"));
-            navigator.mediaSession.setActionHandler('pause', () => {
-                addLog("ボタン押下");
-                document.getElementById('silentMode').play(); // 再停止を防ぐ
-            });
+            const actionHandler = (type) => {
+                addLog(type === 'next' ? "処置(+)" : type === 'prev' ? "処置(-)" : "ボタン");
+                // ミュージックアプリへの切り替わりを防ぐため再生状態を維持
+                audio.play(); 
+            };
+
+            navigator.mediaSession.setActionHandler('nexttrack', () => actionHandler('next'));
+            navigator.mediaSession.setActionHandler('previoustrack', () => actionHandler('prev'));
+            navigator.mediaSession.setActionHandler('play', () => actionHandler('play'));
+            navigator.mediaSession.setActionHandler('pause', () => actionHandler('pause'));
         }
     }
 
@@ -107,24 +90,6 @@
         const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
         const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
         document.getElementById('timer').textContent = `${h}:${m}:${s}`;
-    }
-
-    function stopApp() {
-        recorder.stop();
-        document.getElementById('silentMode').pause();
-        clearInterval(timerId);
-        addLog("記録終了");
-        debugDiv.textContent = "保存中...";
-        setTimeout(() => location.reload(), 2000);
-    }
-
-    function exportAudio() {
-        const blob = new Blob(chunks, { type: 'audio/wav' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `救急活動_${new Date().getTime()}.wav`;
-        a.click();
     }
 </script>
 </body>
