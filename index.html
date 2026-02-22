@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>救急STAMP V1.1.5</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #2c3e50; color: white; margin: 0; padding: 20px; text-align: center; }
+        .card { background: #34495e; border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 400px; margin: auto; }
+        .timer { font-size: 4rem; font-weight: bold; margin: 20px 0; font-family: 'Courier New', monospace; color: #f1c40f; }
+        button { width: 100%; padding: 20px; margin: 10px 0; font-size: 1.3rem; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-start { background: #27ae60; color: white; }
+        .btn-stop { background: #c0392b; color: white; }
+        .btn-stamp { background: #2980b9; color: white; height: 80px; }
+        #logList { margin-top: 20px; text-align: left; background: rgba(0,0,0,0.2); border-radius: 10px; max-height: 200px; overflow-y: auto; }
+        .log-item { padding: 12px; border-bottom: 1px solid #444; display: flex; justify-content: space-between; font-size: 1rem; }
+        .hint { font-size: 0.8rem; color: #bdc3c7; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2 style="margin:0;">救急活動記録 V1.1.5</h2>
+    <div id="timer" class="timer">00:00:00</div>
+    
+    <button id="startBtn" class="btn-start" onclick="startApp()">録音・リモコン開始</button>
+    <button id="stopBtn" class="btn-stop" onclick="stopApp()" style="display:none;">停止・データ保存</button>
+    <button class="btn-stamp" onclick="addLog('画面タッチ')">画面スタンプ</button>
+
+    <div class="hint">
+        イヤホンの<b>「＋」または「ー」を長押し</b>すると<br>
+        スタンプが記録されます。
+    </div>
+
+    <div id="logList"></div>
+</div>
+
+<audio id="dummy" loop src="https://raw.githubusercontent.com/anars/blank-audio/master/10-seconds-of-silence.mp3"></audio>
+
+<script>
+    let recorder, chunks = [], startTime, timerId;
+
+    function addLog(msg) {
+        const now = new Date();
+        const time = now.toLocaleTimeString('ja-JP', { hour12: false });
+        const elapsed = document.getElementById('timer').textContent;
+        const item = document.createElement('div');
+        item.className = 'log-item';
+        item.innerHTML = `<span><b>${msg}</b></span><span>${time}</span>`;
+        document.getElementById('logList').prepend(item);
+        
+        // 視覚フィードバック（画面が白く光る）
+        document.body.style.background = "#ecf0f1";
+        setTimeout(() => document.body.style.background = "#2c3e50", 150);
+    }
+
+    async function startApp() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            recorder = new MediaRecorder(stream);
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'audio/wav' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `救急活動_${new Date().getTime()}.wav`;
+                a.click();
+            };
+            recorder.start();
+
+            document.getElementById('dummy').play();
+            startTime = new Date();
+            timerId = setInterval(() => {
+                const d = new Date(new Date() - startTime);
+                document.getElementById('timer').textContent = 
+                    String(d.getUTCHours()).padStart(2,'0')+":"+
+                    String(d.getUTCMinutes()).padStart(2,'0')+":"+
+                    String(d.getUTCSeconds()).padStart(2,'0');
+            }, 1000);
+
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'block';
+
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({ title: '救急記録中' });
+                // 長押し（曲送り・戻し）をフック
+                navigator.mediaSession.setActionHandler('nexttrack', () => addLog("イヤホン(+)"));
+                navigator.mediaSession.setActionHandler('previoustrack', () => addLog("イヤホン(-)"));
+            }
+            addLog("録音開始");
+        } catch (e) { alert("エラー: " + e); }
+    }
+
+    function stopApp() {
+        recorder.stop();
+        document.getElementById('dummy').pause();
+        clearInterval(timerId);
+        addLog("録音終了");
+        setTimeout(() => location.reload(), 1500);
+    }
+</script>
+</body>
+</html>
