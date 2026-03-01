@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voice Recorder v1.0.1</title>
+    <title>Voice Recorder v1.0.2</title>
     <style>
-        /* Version: 1.0.1 */
+        /* Version: 1.0.2 */
         :root {
             --bg-color: #1a1a1a;
             --card-bg: #2d2d2d;
@@ -13,61 +13,64 @@
             --accent-color: #007aff;
             --active-color: #34c759;
             --stop-color: #ff3b30;
+            --warning-color: #ff9500;
             --border-radius: 12px;
         }
 
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            height: 100dvh;
-            overflow: hidden;
+            margin: 0; padding: 15px;
+            display: flex; flex-direction: column;
+            height: 100dvh; overflow: hidden;
         }
 
-        h1 {
-            font-size: 1.2rem;
-            text-align: center;
-            margin-bottom: 15px;
-            color: var(--accent-color);
-        }
-
-        button {
-            touch-action: manipulation;
-            font-size: 16px;
-            border: none;
+        /* HTTPS 警告 */
+        #https-warning {
+            display: none;
+            background-color: var(--warning-color);
+            color: black;
+            padding: 10px;
             border-radius: var(--border-radius);
-            padding: 15px;
             font-weight: bold;
-            cursor: pointer;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-align: center;
         }
+
+        /* 診断パネル */
+        #diag-panel {
+            background: #000;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            margin-bottom: 10px;
+            border: 1px solid #444;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        .diag-item span { color: var(--active-color); }
 
         #main-btn {
+            touch-action: manipulation;
             width: 100%;
             background-color: var(--accent-color);
             color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
             margin-bottom: 15px;
-            font-size: 1.1rem;
         }
 
-        #main-btn.recording {
-            background-color: var(--stop-color);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
+        #main-btn.recording { background-color: var(--stop-color); }
 
         #result-area {
             flex: 1;
@@ -76,205 +79,170 @@
             padding: 15px;
             overflow-y: auto;
             margin-bottom: 15px;
-            line-height: 1.6;
             font-size: 16px;
+            line-height: 1.6;
             white-space: pre-wrap;
             border: 1px solid #444;
         }
 
-        .interim {
-            color: var(--active-color);
-            font-weight: bold;
+        .interim { color: var(--active-color); opacity: 0.8; }
+
+        .bottom-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .sec-btn {
+            touch-action: manipulation;
+            background: #444; color: white; border: none;
+            padding: 12px; border-radius: 8px; font-weight: bold;
         }
 
-        .controls-bottom {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .secondary-btn {
-            background-color: #444;
-            color: white;
-        }
-
-        #status-bar {
-            font-size: 14px;
-            text-align: center;
-            margin-top: 10px;
-            padding: 5px;
-            border-radius: 4px;
-            transition: background 0.3s;
-        }
-
-        #error-log {
-            font-size: 12px;
+        #error-display {
             color: var(--stop-color);
+            font-size: 12px;
             text-align: center;
             margin-top: 5px;
-            min-height: 1.2em;
+            min-height: 15px;
         }
     </style>
 </head>
 <body>
 
-    <h1>Speech to Text v1.0.1</h1>
+    <div id="https-warning">⚠️ HTTPS接続が必要です（マイクが動作しません）</div>
 
-    <button id="main-btn">録音開始 (Tap to Start)</button>
-
-    <div id="result-area"></div>
-
-    <div class="controls-bottom">
-        <button id="copy-btn" class="secondary-btn">コピー</button>
-        <button id="clear-btn" class="secondary-btn">消去</button>
+    <div id="diag-panel">
+        <div class="diag-item">API: <span id="diag-api">-</span></div>
+        <div class="diag-item">State: <span id="diag-state">idle</span></div>
+        <div class="diag-item">Event: <span id="diag-event">none</span></div>
+        <div class="diag-item">HTTPS: <span id="diag-https">-</span></div>
     </div>
 
-    <div id="status-bar">Status: Ready</div>
-    <div id="error-log"></div>
+    <button id="main-btn">録音開始</button>
+
+    <div id="result-area" placeholder="ここにテキストが表示されます"></div>
+
+    <div class="bottom-btns">
+        <button id="copy-btn" class="sec-btn">コピー</button>
+        <button id="clear-btn" class="sec-btn">消去</button>
+    </div>
+
+    <div id="error-display"></div>
 
     <script>
         /**
-         * 音響ロジック定義書（修正版 v1.0.1）
-         * 1. continuous: false (iOSでのフリーズ回避のため、あえてfalseに設定し手動ループさせる)
-         * 2. interimResults: true (リアルタイムフィードバック維持)
+         * 音響ロジック定義書 v1.0.2
+         * iOS Safariの制限を回避するため continuous: false + 手動ディレイループを採用
          */
-        const recognitionConfig = {
-            lang: 'ja-JP',
-            continuous: false, 
-            interimResults: true
-        };
-
+        const config = { lang: 'ja-JP', continuous: false, interimResults: true };
+        
         const mainBtn = document.getElementById('main-btn');
-        const copyBtn = document.getElementById('copy-btn');
-        const clearBtn = document.getElementById('clear-btn');
         const resultArea = document.getElementById('result-area');
-        const statusBar = document.getElementById('status-bar');
-        const errorLog = document.getElementById('error-log');
+        const errorDisplay = document.getElementById('error-display');
+        
+        // 診断用要素
+        const dApi = document.getElementById('diag-api');
+        const dState = document.getElementById('diag-state');
+        const dEvent = document.getElementById('diag-event');
+        const dHttps = document.getElementById('diag-https');
 
-        let recognition = null;
         let isRecording = false;
         let finalTranscript = '';
+        let recognition = null;
+        let audioContext = null;
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        // 1. 初期チェック
+        window.onload = () => {
+            const isHttps = location.protocol === 'https:' || location.hostname === 'localhost';
+            dHttps.innerText = isHttps ? "OK" : "NG";
+            if (!isHttps) document.getElementById('https-warning').style.display = 'block';
 
-        if (!SpeechRecognition) {
-            showError("お使いのブラウザはWeb Speech APIに対応していません。");
-        } else {
-            initRecognition();
-        }
+            const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (Speech) {
+                dApi.innerText = "OK";
+                recognition = new Speech();
+                Object.assign(recognition, config);
+                setupRecognitionEvents();
+            } else {
+                dApi.innerText = "NG";
+                errorDisplay.innerText = "Speech API 未対応のブラウザです";
+            }
+        };
 
-        function initRecognition() {
-            recognition = new SpeechRecognition();
-            Object.assign(recognition, recognitionConfig);
-
-            recognition.onstart = () => {
-                updateStatus("音声検知待ち...", true);
-                showError(""); 
-            };
-
+        function setupRecognitionEvents() {
+            recognition.onstart = () => updateDiag('recognizing', 'onstart');
+            
             recognition.onresult = (event) => {
-                let interimTranscript = '';
+                updateDiag('recognizing', 'onresult');
+                let interim = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    const transcript = event.results[i][0].transcript;
+                    const text = event.results[i][0].transcript;
                     if (event.results[i].isFinal) {
-                        finalTranscript += transcript + '。';
+                        finalTranscript += text + '。';
                     } else {
-                        interimTranscript += transcript;
+                        interim += text;
                     }
                 }
-                updateStatus("音声入力中！！", true, true);
-                renderText(interimTranscript);
+                resultArea.innerHTML = finalTranscript + '<span class="interim">' + interim + '</span>';
+                resultArea.scrollTop = resultArea.scrollHeight;
             };
 
-            recognition.onerror = (event) => {
-                console.error("Recognition Error:", event.error);
-                showError(`Error: ${event.error}`);
-                
-                // iOSで頻発する 'network' エラー等でも録音状態なら維持を試みる
-                if (event.error === 'not-allowed') {
-                    isRecording = false;
-                    updateUI();
-                }
+            recognition.onerror = (e) => {
+                updateDiag('error', 'onerror: ' + e.error);
+                errorDisplay.innerText = "Error: " + e.error;
             };
 
             recognition.onend = () => {
-                // 擬似連続認識ロジック: 録音中フラグが立っていれば即座に再起動
+                updateDiag('idle', 'onend');
+                // 再起動ループ (iOS対策のディレイ)
                 if (isRecording) {
-                    try {
-                        recognition.start();
-                    } catch (e) {
-                        console.log("Restart failed, retrying...", e);
-                        setTimeout(() => { if(isRecording) recognition.start(); }, 300);
-                    }
-                } else {
-                    updateStatus("停止中", false);
+                    updateDiag('restarting', 'waiting...');
+                    setTimeout(() => {
+                        if (isRecording) {
+                            try { recognition.start(); } catch(err) { console.error(err); }
+                        }
+                    }, 400); 
                 }
             };
         }
 
-        mainBtn.addEventListener('click', () => {
+        // 2. 権限トリガー
+        mainBtn.addEventListener('click', async () => {
             if (!isRecording) {
-                startRecording();
-            } else {
-                stopRecording();
-            }
-        });
+                // AudioContextを生成してiOSのオーディオをアクティブにする
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
 
-        function startRecording() {
-            isRecording = true;
-            finalTranscript = resultArea.innerText ? resultArea.innerText + '\n' : '';
-            updateUI();
-            try {
-                recognition.start();
-            } catch (e) {
-                showError("起動失敗: " + e.message);
-                isRecording = false;
-                updateUI();
-            }
-        }
-
-        function stopRecording() {
-            isRecording = false;
-            updateUI();
-            recognition.stop();
-        }
-
-        function updateUI() {
-            if (isRecording) {
+                isRecording = true;
                 mainBtn.innerText = "録音停止";
                 mainBtn.classList.add('recording');
+                errorDisplay.innerText = "";
+                try {
+                    recognition.start();
+                } catch (e) {
+                    updateDiag('error', 'start-failed');
+                }
             } else {
-                mainBtn.innerText = "録音開始 (Tap to Start)";
+                isRecording = false;
+                mainBtn.innerText = "録音開始";
                 mainBtn.classList.remove('recording');
+                recognition.stop();
             }
-        }
-
-        function renderText(interim) {
-            resultArea.innerHTML = finalTranscript + '<span class="interim">' + interim + '</span>';
-            resultArea.scrollTop = resultArea.scrollHeight;
-        }
-
-        function updateStatus(msg, active, detecting = false) {
-            statusBar.innerText = `Status: ${msg}`;
-            statusBar.style.background = detecting ? "#34c75944" : "transparent";
-            statusBar.style.color = detecting ? "var(--active-color)" : "var(--text-color)";
-        }
-
-        function showError(msg) {
-            errorLog.innerText = msg;
-        }
-
-        // コピー・消去機能
-        copyBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(resultArea.innerText).then(() => {
-                const prev = copyBtn.innerText;
-                copyBtn.innerText = "完了！";
-                setTimeout(() => copyBtn.innerText = prev, 1500);
-            });
         });
 
-        clearBtn.addEventListener('click', () => {
-            if (confirm("全消去しますか？")) {
+        function updateDiag(state, event) {
+            dState.innerText = state;
+            dEvent.innerText = event;
+            console.log(`[Diag] State: ${state}, Event: ${event}`);
+        }
+
+        // コピー・消去
+        document.getElementById('copy-btn').addEventListener('click', () => {
+            navigator.clipboard.writeText(resultArea.innerText);
+            alert("コピーしました");
+        });
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            if(confirm("消去しますか？")) {
                 finalTranscript = '';
                 resultArea.innerHTML = '';
             }
