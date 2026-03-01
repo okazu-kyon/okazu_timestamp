@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Log Recorder v1.1.0</title>
+    <title>High-Response Recorder v1.2.0</title>
     <style>
-        /* Version: 1.1.0 */
+        /* Version: 1.2.0 */
         :root {
             --bg-color: #1a1a1a;
             --card-bg: #2d2d2d;
@@ -13,7 +13,6 @@
             --accent-color: #007aff;
             --active-color: #34c759;
             --stop-color: #ff3b30;
-            --warning-color: #ff9500;
             --timestamp-color: #5ac8fa;
             --border-radius: 12px;
         }
@@ -29,12 +28,16 @@
             height: 100dvh; overflow: hidden;
         }
 
-        #https-warning {
-            display: none;
-            background-color: var(--warning-color);
-            color: black;
-            padding: 10px; border-radius: var(--border-radius);
-            font-weight: bold; margin-bottom: 10px; text-align: center; font-size: 14px;
+        /* 音量インジケーター */
+        #meter-container {
+            width: 100%; height: 6px;
+            background: #444; border-radius: 3px;
+            margin-bottom: 10px; overflow: hidden;
+        }
+        #meter-bar {
+            width: 0%; height: 100%;
+            background: var(--active-color);
+            transition: width 0.1s ease-out;
         }
 
         #diag-panel {
@@ -43,13 +46,11 @@
             border: 1px solid #444; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
         }
 
-        .diag-item span { color: var(--active-color); }
-
         #main-btn {
             touch-action: manipulation; width: 100%;
             background-color: var(--accent-color); color: white;
             border: none; border-radius: var(--border-radius);
-            padding: 20px; font-size: 1.2rem; font-weight: bold; margin-bottom: 15px;
+            padding: 18px; font-size: 1.1rem; font-weight: bold; margin-bottom: 10px;
         }
 
         #main-btn.recording { background-color: var(--stop-color); }
@@ -60,14 +61,8 @@
             font-size: 16px; line-height: 1.8; white-space: pre-wrap; border: 1px solid #444;
         }
 
-        .timestamp {
-            color: var(--timestamp-color);
-            font-weight: bold;
-            font-size: 0.85em;
-            margin-right: 8px;
-        }
-
-        .interim { color: var(--active-color); opacity: 0.7; font-style: italic; }
+        .timestamp { color: var(--timestamp-color); font-weight: bold; font-size: 0.85em; margin-right: 8px; }
+        .interim { color: var(--active-color); opacity: 0.8; font-style: italic; }
 
         .bottom-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .sec-btn {
@@ -75,19 +70,19 @@
             border: none; padding: 12px; border-radius: 8px; font-weight: bold;
         }
 
-        #error-display { color: var(--stop-color); font-size: 12px; text-align: center; margin-top: 5px; min-height: 15px; }
+        #error-display { color: var(--stop-color); font-size: 11px; text-align: center; margin-top: 5px; }
     </style>
 </head>
 <body>
 
-    <div id="https-warning">⚠️ HTTPS接続が必要です</div>
+    <div id="meter-container"><div id="meter-bar"></div></div>
 
     <div id="diag-panel">
-        <div class="diag-item">State: <span id="diag-state">idle</span></div>
-        <div class="diag-item">Event: <span id="diag-event">none</span></div>
+        <div class="diag-item">State: <span id="diag-state" style="color:var(--active-color)">idle</span></div>
+        <div class="diag-item">Mic: <span id="diag-mic">waiting</span></div>
     </div>
 
-    <button id="main-btn">録音開始</button>
+    <button id="main-btn">録音開始 (High-Response)</button>
 
     <div id="result-area"></div>
 
@@ -100,37 +95,37 @@
 
     <script>
         /**
-         * 音響ロジック定義書 v1.1.0
-         * 1. continuous: false (iOS再起動ループ採用)
-         * 2. BLANK_THRESHOLD: 10000ms (10秒の無音で改行)
+         * 音響ロジック定義書 v1.2.0
+         * 1. continuous: false (iOS高速ループ)
+         * 2. RESTART_DELAY: 200ms (レスポンス向上)
+         * 3. BLANK_THRESHOLD: 5000ms (5秒無音でスタンプ更新)
+         * 4. maxAlternatives: 1
          */
-        const config = { lang: 'ja-JP', continuous: false, interimResults: true };
-        const BLANK_THRESHOLD = 10000; 
+        const config = { lang: 'ja-JP', continuous: false, interimResults: true, maxAlternatives: 1 };
+        const BLANK_THRESHOLD = 5000;
+        const RESTART_DELAY = 200;
         
         const mainBtn = document.getElementById('main-btn');
         const resultArea = document.getElementById('result-area');
-        const errorDisplay = document.getElementById('error-display');
+        const meterBar = document.getElementById('meter-bar');
         const dState = document.getElementById('diag-state');
-        const dEvent = document.getElementById('diag-event');
+        const dMic = document.getElementById('diag-mic');
 
         let isRecording = false;
         let recognition = null;
         let audioContext = null;
+        let analyser = null;
+        let dataArray = null;
         
-        let lastSpeechTime = 0; // 最後に音声を検知した時刻
-        let fullLogHTML = '';   // 確定したHTMLログを保持
+        let lastSpeechTime = 0;
+        let fullLogHTML = '';
 
         window.onload = () => {
-            if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-                document.getElementById('https-warning').style.display = 'block';
-            }
             const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (Speech) {
                 recognition = new Speech();
                 Object.assign(recognition, config);
                 setupRecognitionEvents();
-            } else {
-                errorDisplay.innerText = "Speech API 未対応です";
             }
         };
 
@@ -139,19 +134,46 @@
             return `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
         }
 
+        // 音量メーターの更新
+        function updateMeter() {
+            if (!isRecording) {
+                meterBar.style.width = '0%';
+                return;
+            }
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+            let average = sum / dataArray.length;
+            let level = Math.min(average * 2, 100); // 感度調整用
+            meterBar.style.width = level + '%';
+            requestAnimationFrame(updateMeter);
+        }
+
+        async function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                dMic.innerText = "Active";
+                dMic.style.color = "var(--active-color)";
+            }
+            if (audioContext.state === 'suspended') await audioContext.resume();
+        }
+
         function setupRecognitionEvents() {
-            recognition.onstart = () => updateDiag('recognizing', 'onstart');
+            recognition.onstart = () => { dState.innerText = 'recognizing'; };
             
             recognition.onresult = (event) => {
-                updateDiag('recognizing', 'onresult');
                 let interim = '';
                 const now = Date.now();
 
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     const transcript = event.results[i][0].transcript;
-                    
                     if (event.results[i].isFinal) {
-                        // 10秒以上のブランク判定
                         if (now - lastSpeechTime > BLANK_THRESHOLD) {
                             fullLogHTML += (fullLogHTML ? '\n' : '') + `<span class="timestamp">${getTimestamp()}</span>`;
                         }
@@ -161,62 +183,52 @@
                         interim += transcript;
                     }
                 }
-                
-                // 描画更新
                 resultArea.innerHTML = fullLogHTML + (interim ? `<span class="interim">${interim}</span>` : '');
                 resultArea.scrollTop = resultArea.scrollHeight;
             };
 
-            recognition.onerror = (e) => {
-                updateDiag('error', 'onerror: ' + e.error);
-                errorDisplay.innerText = "Error: " + e.error;
-            };
-
             recognition.onend = () => {
-                updateDiag('idle', 'onend');
+                dState.innerText = 'idle';
                 if (isRecording) {
                     setTimeout(() => {
                         if (isRecording) {
-                            try { recognition.start(); } catch(err) { console.error(err); }
+                            try { recognition.start(); dState.innerText = 'restarting'; } catch(err) {}
                         }
-                    }, 400); 
+                    }, RESTART_DELAY);
                 }
+            };
+
+            recognition.onerror = (e) => {
+                document.getElementById('error-display').innerText = "Error: " + e.error;
             };
         }
 
         mainBtn.addEventListener('click', async () => {
             if (!isRecording) {
-                if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioContext.state === 'suspended') await audioContext.resume();
-
-                isRecording = true;
-                // 開始時に一度タイムスタンプを強制セット（初回用）
-                if (!fullLogHTML) {
-                    fullLogHTML = `<span class="timestamp">${getTimestamp()}</span>`;
-                    lastSpeechTime = Date.now();
+                try {
+                    await initAudio();
+                    isRecording = true;
+                    if (!fullLogHTML) {
+                        fullLogHTML = `<span class="timestamp">${getTimestamp()}</span>`;
+                        lastSpeechTime = Date.now();
+                    }
+                    mainBtn.innerText = "録音停止";
+                    mainBtn.classList.add('recording');
+                    recognition.start();
+                    updateMeter();
+                } catch (err) {
+                    alert("マイクへのアクセスを許可してください");
                 }
-
-                mainBtn.innerText = "録音停止";
-                mainBtn.classList.add('recording');
-                errorDisplay.innerText = "";
-                recognition.start();
             } else {
                 isRecording = false;
-                mainBtn.innerText = "録音開始";
+                mainBtn.innerText = "録音開始 (High-Response)";
                 mainBtn.classList.remove('recording');
                 recognition.stop();
             }
         });
 
-        function updateDiag(state, event) {
-            dState.innerText = state;
-            dEvent.innerText = event;
-        }
-
         document.getElementById('copy-btn').addEventListener('click', () => {
-            // タグを除去してテキストのみコピー
-            const plainText = resultArea.innerText;
-            navigator.clipboard.writeText(plainText).then(() => alert("コピーしました"));
+            navigator.clipboard.writeText(resultArea.innerText).then(() => alert("コピーしました"));
         });
 
         document.getElementById('clear-btn').addEventListener('click', () => {
