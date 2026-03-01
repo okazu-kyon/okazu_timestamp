@@ -3,100 +3,253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>救急STAMP V1.2.0</title>
+    <title>Voice Recorder v1.0.0</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; text-align: center; }
-        .card { border: 2px solid #444; border-radius: 20px; padding: 25px; background: #111; max-width: 400px; margin: auto; }
-        .timer { font-size: 4.5rem; font-weight: bold; margin: 15px 0; font-family: 'Courier New', monospace; color: #00ff00; }
-        button { width: 100%; padding: 20px; margin: 10px 0; font-size: 1.4rem; border: none; border-radius: 15px; cursor: pointer; font-weight: bold; }
-        .btn-start { background: #28a745; color: white; }
-        #logList { margin-top: 20px; text-align: left; height: 300px; overflow-y: auto; background: #222; padding: 10px; border-radius: 10px; }
-        .log-item { border-bottom: 1px solid #333; padding: 12px 0; display: flex; justify-content: space-between; font-size: 1.3rem; }
+        /* Version: 1.0.0 */
+        /* デザイン・レイアウトの固定 */
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --accent-color: #007aff;
+            --stop-color: #ff3b30;
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            text-align: center;
+            margin-bottom: 15px;
+            color: var(--accent-color);
+        }
+
+        /* iOS ズーム防止策 */
+        button {
+            touch-action: manipulation;
+            font-size: 16px;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:active {
+            opacity: 0.7;
+        }
+
+        #main-btn {
+            width: 100%;
+            background-color: var(--accent-color);
+            color: white;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        #main-btn.recording {
+            background-color: var(--stop-color);
+        }
+
+        #result-area {
+            flex: 1;
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            line-height: 1.6;
+            font-size: 16px;
+            white-space: pre-wrap;
+            border: 1px solid #444;
+        }
+
+        .interim {
+            color: #888;
+        }
+
+        .controls-bottom {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .secondary-btn {
+            background-color: #444;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        #status-bar {
+            font-size: 12px;
+            text-align: center;
+            margin-top: 8px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <div id="timer" class="timer">00:00:00</div>
-    <button id="startBtn" class="btn-start" onclick="startApp()">▶ 記録開始（通信維持モード）</button>
-    <div id="logList"></div>
-</div>
+    <h1>Speech to Text v1.0.0</h1>
 
-<audio id="stayAlive" loop playsinline src="https://raw.githubusercontent.com/anars/blank-audio/master/1-minute-of-silence.mp3"></audio>
+    <button id="main-btn">録音開始</button>
 
-<script>
-    let recorder, chunks = [], startTime, timerId;
-    const audio = document.getElementById('stayAlive');
+    <div id="result-area" id="output">ここに文字起こしが表示されます...</div>
 
-    function addLog(msg) {
-        const now = new Date();
-        const time = now.toLocaleTimeString('ja-JP', { hour12: false });
-        const item = document.createElement('div');
-        item.className = 'log-item';
-        item.innerHTML = `<span><b>${msg}</b></span><span style="color:#0f0">${time}</span>`;
-        document.getElementById('logList').prepend(item);
-        
-        // 視覚フィードバック
-        document.body.style.background = "#fff";
-        setTimeout(() => document.body.style.background = "#000", 80);
-        
-        // 操作のたびに再生を再トリガーして接続を維持
-        audio.play();
-    }
+    <div class="controls-bottom">
+        <button id="copy-btn" class="secondary-btn">テキストをコピー</button>
+        <button id="clear-btn" class="secondary-btn">消去</button>
+    </div>
 
-    async function startApp() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            recorder = new MediaRecorder(stream);
-            recorder.ondataavailable = e => chunks.push(e.data);
-            recorder.start();
+    <div id="status-bar">Status: Ready</div>
 
-            // iPhoneで確実に音声を流す
-            audio.volume = 0.1; 
-            audio.play();
+    <script>
+        /**
+         * 音響ロジック定義書（絶対変更禁止エリア）
+         * 1. lang: 'ja-JP' (日本語認識)
+         * 2. continuous: true (連続認識)
+         * 3. interimResults: true (途中経過表示)
+         */
+        const recognitionConfig = {
+            lang: 'ja-JP',
+            continuous: true,
+            interimResults: true
+        };
 
-            setupRemote();
+        const mainBtn = document.getElementById('main-btn');
+        const copyBtn = document.getElementById('copy-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const resultArea = document.getElementById('result-area');
+        const statusBar = document.getElementById('status-bar');
 
-            startTime = new Date();
-            timerId = setInterval(updateTimer, 1000);
-            document.getElementById('startBtn').style.display = 'none';
-            addLog("記録開始");
-        } catch (e) { alert("マイクを許可してください"); }
-    }
+        let recognition = null;
+        let isRecording = false;
+        let finalTranscript = '';
 
-    function setupRemote() {
-        if ('mediaSession' in navigator) {
-            navigator.mediaSession.metadata = new MediaMetadata({
-                title: '救急現場記録：アクティブ',
-                artist: 'リモコン接続中...',
-                album: 'V1.2.0'
-            });
+        // Web Speech API の初期化 (Safari/Chrome互換)
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-            // 重要な変更：全ての操作を拾う
-            const actions = [
-                ['play', 'ボタン押下'],
-                ['pause', 'ボタン押下'],
-                ['nexttrack', '処置(+)'],
-                ['previoustrack', '処置(-)']
-            ];
-
-            actions.forEach(([action, label]) => {
-                navigator.mediaSession.setActionHandler(action, () => {
-                    addLog(label);
-                    // ボタンが押されたらSafariに「まだ音を出してるぞ」と再認識させる
-                    audio.play();
-                });
-            });
+        if (!SpeechRecognition) {
+            resultArea.innerText = "お使いのブラウザは音声認識に対応していません。iOS SafariまたはChromeをお試しください。";
+            mainBtn.disabled = true;
+        } else {
+            recognition = new SpeechRecognition();
+            Object.assign(recognition, recognitionConfig);
         }
-    }
 
-    function updateTimer() {
-        const diff = new Date() - startTime;
-        const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
-        const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
-        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
-        document.getElementById('timer').textContent = `${h}:${m}:${s}`;
-    }
-</script>
+        // 音声認識のイベント制御
+        if (recognition) {
+            recognition.onstart = () => {
+                console.log("Speech recognition started");
+                updateStatus("認識中...");
+            };
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript + '\n';
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                renderText(interimTranscript);
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech Recognition Error:", event.error);
+                updateStatus(`Error: ${event.error}`);
+                
+                // 404やネットワークエラー時の具体的なログ
+                if (event.error === 'not-allowed') {
+                    alert("マイクの使用が許可されていません。設定を確認してください。");
+                }
+            };
+
+            recognition.onend = () => {
+                console.log("Speech recognition ended");
+                // 意図しない終了（沈黙など）の場合に再起動する堅牢性ロジック
+                if (isRecording) {
+                    console.log("Restarting recognition...");
+                    recognition.start();
+                } else {
+                    updateStatus("停止中");
+                }
+            };
+        }
+
+        // ボタン操作
+        mainBtn.addEventListener('click', () => {
+            if (!isRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            if (confirm("テキストを消去しますか？")) {
+                finalTranscript = '';
+                resultArea.innerHTML = '';
+                updateStatus("消去完了");
+            }
+        });
+
+        copyBtn.addEventListener('click', () => {
+            const text = resultArea.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = copyBtn.innerText;
+                copyBtn.innerText = "コピー完了！";
+                setTimeout(() => copyBtn.innerText = originalText, 2000);
+            }).catch(err => {
+                console.error("Copy failed:", err);
+            });
+        });
+
+        function startRecording() {
+            isRecording = true;
+            mainBtn.innerText = "録音停止";
+            mainBtn.classList.add('recording');
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error("Recognition start error:", e);
+            }
+        }
+
+        function stopRecording() {
+            isRecording = false;
+            mainBtn.innerText = "録音開始";
+            mainBtn.classList.remove('recording');
+            recognition.stop();
+        }
+
+        function renderText(interim) {
+            resultArea.innerHTML = finalTranscript + '<span class="interim">' + interim + '</span>';
+            // 自動スクロール
+            resultArea.scrollTop = resultArea.scrollHeight;
+        }
+
+        function updateStatus(msg) {
+            statusBar.innerText = `Status: ${msg}`;
+        }
+    </script>
 </body>
 </html>
