@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voice Recorder v1.0.0</title>
+    <title>Voice Recorder v1.0.1</title>
     <style>
-        /* Version: 1.0.0 */
-        /* デザイン・レイアウトの固定 */
+        /* Version: 1.0.1 */
         :root {
             --bg-color: #1a1a1a;
             --card-bg: #2d2d2d;
             --text-color: #e0e0e0;
             --accent-color: #007aff;
+            --active-color: #34c759;
             --stop-color: #ff3b30;
             --border-radius: 12px;
         }
@@ -40,7 +40,6 @@
             color: var(--accent-color);
         }
 
-        /* iOS ズーム防止策 */
         button {
             touch-action: manipulation;
             font-size: 16px;
@@ -49,11 +48,6 @@
             padding: 15px;
             font-weight: bold;
             cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        button:active {
-            opacity: 0.7;
         }
 
         #main-btn {
@@ -66,6 +60,13 @@
 
         #main-btn.recording {
             background-color: var(--stop-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
         }
 
         #result-area {
@@ -82,7 +83,8 @@
         }
 
         .interim {
-            color: #888;
+            color: var(--active-color);
+            font-weight: bold;
         }
 
         .controls-bottom {
@@ -94,42 +96,51 @@
         .secondary-btn {
             background-color: #444;
             color: white;
-            font-size: 0.9rem;
         }
 
         #status-bar {
-            font-size: 12px;
+            font-size: 14px;
             text-align: center;
-            margin-top: 8px;
-            color: #666;
+            margin-top: 10px;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        #error-log {
+            font-size: 12px;
+            color: var(--stop-color);
+            text-align: center;
+            margin-top: 5px;
+            min-height: 1.2em;
         }
     </style>
 </head>
 <body>
 
-    <h1>Speech to Text v1.0.0</h1>
+    <h1>Speech to Text v1.0.1</h1>
 
-    <button id="main-btn">録音開始</button>
+    <button id="main-btn">録音開始 (Tap to Start)</button>
 
-    <div id="result-area" id="output">ここに文字起こしが表示されます...</div>
+    <div id="result-area"></div>
 
     <div class="controls-bottom">
-        <button id="copy-btn" class="secondary-btn">テキストをコピー</button>
+        <button id="copy-btn" class="secondary-btn">コピー</button>
         <button id="clear-btn" class="secondary-btn">消去</button>
     </div>
 
     <div id="status-bar">Status: Ready</div>
+    <div id="error-log"></div>
 
     <script>
         /**
-         * 音響ロジック定義書（絶対変更禁止エリア）
-         * 1. lang: 'ja-JP' (日本語認識)
-         * 2. continuous: true (連続認識)
-         * 3. interimResults: true (途中経過表示)
+         * 音響ロジック定義書（修正版 v1.0.1）
+         * 1. continuous: false (iOSでのフリーズ回避のため、あえてfalseに設定し手動ループさせる)
+         * 2. interimResults: true (リアルタイムフィードバック維持)
          */
         const recognitionConfig = {
             lang: 'ja-JP',
-            continuous: true,
+            continuous: false, 
             interimResults: true
         };
 
@@ -138,64 +149,69 @@
         const clearBtn = document.getElementById('clear-btn');
         const resultArea = document.getElementById('result-area');
         const statusBar = document.getElementById('status-bar');
+        const errorLog = document.getElementById('error-log');
 
         let recognition = null;
         let isRecording = false;
         let finalTranscript = '';
 
-        // Web Speech API の初期化 (Safari/Chrome互換)
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
         if (!SpeechRecognition) {
-            resultArea.innerText = "お使いのブラウザは音声認識に対応していません。iOS SafariまたはChromeをお試しください。";
-            mainBtn.disabled = true;
+            showError("お使いのブラウザはWeb Speech APIに対応していません。");
         } else {
-            recognition = new SpeechRecognition();
-            Object.assign(recognition, recognitionConfig);
+            initRecognition();
         }
 
-        // 音声認識のイベント制御
-        if (recognition) {
+        function initRecognition() {
+            recognition = new SpeechRecognition();
+            Object.assign(recognition, recognitionConfig);
+
             recognition.onstart = () => {
-                console.log("Speech recognition started");
-                updateStatus("認識中...");
+                updateStatus("音声検知待ち...", true);
+                showError(""); 
             };
 
             recognition.onresult = (event) => {
                 let interimTranscript = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const transcript = event.results[i][0].transcript;
                     if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript + '\n';
+                        finalTranscript += transcript + '。';
                     } else {
-                        interimTranscript += event.results[i][0].transcript;
+                        interimTranscript += transcript;
                     }
                 }
+                updateStatus("音声入力中！！", true, true);
                 renderText(interimTranscript);
             };
 
             recognition.onerror = (event) => {
-                console.error("Speech Recognition Error:", event.error);
-                updateStatus(`Error: ${event.error}`);
+                console.error("Recognition Error:", event.error);
+                showError(`Error: ${event.error}`);
                 
-                // 404やネットワークエラー時の具体的なログ
+                // iOSで頻発する 'network' エラー等でも録音状態なら維持を試みる
                 if (event.error === 'not-allowed') {
-                    alert("マイクの使用が許可されていません。設定を確認してください。");
+                    isRecording = false;
+                    updateUI();
                 }
             };
 
             recognition.onend = () => {
-                console.log("Speech recognition ended");
-                // 意図しない終了（沈黙など）の場合に再起動する堅牢性ロジック
+                // 擬似連続認識ロジック: 録音中フラグが立っていれば即座に再起動
                 if (isRecording) {
-                    console.log("Restarting recognition...");
-                    recognition.start();
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.log("Restart failed, retrying...", e);
+                        setTimeout(() => { if(isRecording) recognition.start(); }, 300);
+                    }
                 } else {
-                    updateStatus("停止中");
+                    updateStatus("停止中", false);
                 }
             };
         }
 
-        // ボタン操作
         mainBtn.addEventListener('click', () => {
             if (!isRecording) {
                 startRecording();
@@ -204,52 +220,65 @@
             }
         });
 
-        clearBtn.addEventListener('click', () => {
-            if (confirm("テキストを消去しますか？")) {
-                finalTranscript = '';
-                resultArea.innerHTML = '';
-                updateStatus("消去完了");
-            }
-        });
-
-        copyBtn.addEventListener('click', () => {
-            const text = resultArea.innerText;
-            navigator.clipboard.writeText(text).then(() => {
-                const originalText = copyBtn.innerText;
-                copyBtn.innerText = "コピー完了！";
-                setTimeout(() => copyBtn.innerText = originalText, 2000);
-            }).catch(err => {
-                console.error("Copy failed:", err);
-            });
-        });
-
         function startRecording() {
             isRecording = true;
-            mainBtn.innerText = "録音停止";
-            mainBtn.classList.add('recording');
+            finalTranscript = resultArea.innerText ? resultArea.innerText + '\n' : '';
+            updateUI();
             try {
                 recognition.start();
             } catch (e) {
-                console.error("Recognition start error:", e);
+                showError("起動失敗: " + e.message);
+                isRecording = false;
+                updateUI();
             }
         }
 
         function stopRecording() {
             isRecording = false;
-            mainBtn.innerText = "録音開始";
-            mainBtn.classList.remove('recording');
+            updateUI();
             recognition.stop();
+        }
+
+        function updateUI() {
+            if (isRecording) {
+                mainBtn.innerText = "録音停止";
+                mainBtn.classList.add('recording');
+            } else {
+                mainBtn.innerText = "録音開始 (Tap to Start)";
+                mainBtn.classList.remove('recording');
+            }
         }
 
         function renderText(interim) {
             resultArea.innerHTML = finalTranscript + '<span class="interim">' + interim + '</span>';
-            // 自動スクロール
             resultArea.scrollTop = resultArea.scrollHeight;
         }
 
-        function updateStatus(msg) {
+        function updateStatus(msg, active, detecting = false) {
             statusBar.innerText = `Status: ${msg}`;
+            statusBar.style.background = detecting ? "#34c75944" : "transparent";
+            statusBar.style.color = detecting ? "var(--active-color)" : "var(--text-color)";
         }
+
+        function showError(msg) {
+            errorLog.innerText = msg;
+        }
+
+        // コピー・消去機能
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(resultArea.innerText).then(() => {
+                const prev = copyBtn.innerText;
+                copyBtn.innerText = "完了！";
+                setTimeout(() => copyBtn.innerText = prev, 1500);
+            });
+        });
+
+        clearBtn.addEventListener('click', () => {
+            if (confirm("全消去しますか？")) {
+                finalTranscript = '';
+                resultArea.innerHTML = '';
+            }
+        });
     </script>
 </body>
 </html>
