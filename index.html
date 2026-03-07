@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>音声・テキストレコーダー</title>
+    <title>音声・テキストレコーダー v1.7.2</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -77,7 +77,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "1.7.1";
+        const APP_VERSION = "1.7.2";
         const config = { lang: 'ja-JP', continuous: true, interimResults: true, maxAlternatives: 1 };
         
         let blankThreshold = 5000;
@@ -117,16 +117,7 @@
             }
         };
 
-        gainSlider.oninput = (e) => {
-            meterGain = parseFloat(e.target.value);
-            gainVal.innerText = `x${meterGain}`;
-        };
-
-        thresholdSlider.oninput = (e) => {
-            blankThreshold = parseInt(e.target.value) * 1000;
-            thresholdVal.innerText = `${e.target.value}秒`;
-        };
-
+        // 消去ロジックの完全強化
         document.getElementById('clear-btn').onclick = () => {
             if (isRecording) {
                 alert("録音中は消去できません");
@@ -137,10 +128,18 @@
                 audioChunks = [];
                 audioBlob = null;
                 lastSpeechTime = 0;
+                
+                // 表示領域の全残留データ削除
                 resultArea.innerHTML = '';
+                
                 dRec.innerText = "OFF";
+                console.log("すべてのデータを消去しました");
             }
         };
+
+        // --- 以下 v1.7.0 継承 ---
+        gainSlider.oninput = (e) => { meterGain = parseFloat(e.target.value); gainVal.innerText = `x${meterGain}`; };
+        thresholdSlider.oninput = (e) => { blankThreshold = parseInt(e.target.value) * 1000; thresholdVal.innerText = `${e.target.value}秒`; };
 
         async function initAudioAndRecorder() {
             if (!activeStream) {
