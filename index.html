@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>音声・テキストレコーダー v1.9.3</title>
+    <title>音声・テキストレコーダー v1.9.5</title>
     <style>
         :root { 
             --bg-color: #ffffff; 
@@ -34,9 +34,9 @@
             height: 100%;
         }
 
-        /* テキスト枠のサイズを調整（大きすぎないようflex-growを管理） */
+        /* 確定済み：テキストエリア */
         #result-area { 
-            flex: 0 1 60%; /* 最大でも60%程度に抑制 */
+            flex: 0 1 60%; 
             border: 2px solid var(--border-color); 
             border-radius: 20px; 
             padding: 15px; 
@@ -48,6 +48,7 @@
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
         }
         
+        /* 確定済み：操作エリア */
         .controls {
             display: flex;
             flex-direction: column;
@@ -55,6 +56,7 @@
             padding-bottom: 10px;
         }
 
+        /* 確定済み：録音ボタンアニメーション */
         #main-btn { 
             width: 65px; 
             height: 65px; 
@@ -69,13 +71,13 @@
             position: relative;
         }
 
-        /* 録音中：丸から四角へ */
         #main-btn.active { 
             border-radius: 15%; 
             transform: scale(0.75); 
             background: #b91c1c;
         }
         
+        /* 確定済み：アクションボタン */
         .action-row { 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
@@ -120,16 +122,33 @@
     </div>
 
     <script>
-        const APP_VERSION = "1.9.3";
+        const APP_VERSION = "1.9.5";
         let recognition, mediaRecorder, audioChunks = [];
+        let silenceTimer = null;
+        let lastTranscript = "";
+        let isFirstRecognition = true;
+
         const resultArea = document.getElementById('result-area');
         const mainBtn = document.getElementById('main-btn');
 
-        /* --- 確定済み録音ロジック (変更禁止) --- */
+        function getTimestamp() {
+            const now = new Date();
+            return `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}] `;
+        }
+
+        function handleSilence() {
+            if (resultArea.innerText.length > 0 && !resultArea.innerText.endsWith('\n')) {
+                resultArea.innerText += '\n';
+                isFirstRecognition = true; // 次の発話時にタイムスタンプを付与
+            }
+        }
+
+        /* --- 確定済み録音ロジック (.m4a互換) --- */
         mainBtn.onclick = async () => {
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
                 if (recognition) recognition.stop();
+                clearTimeout(silenceTimer);
                 mainBtn.classList.remove('active');
             } else {
                 try {
@@ -143,13 +162,28 @@
                     recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
                     recognition.lang = 'ja-JP';
                     recognition.continuous = true;
-                    recognition.interimResults = true;
+                    recognition.interimResults = false; // 文の確定を待つ
+
                     recognition.onresult = (e) => {
-                        resultArea.innerText = Array.from(e.results).map(r => r[0].transcript).join('');
+                        clearTimeout(silenceTimer);
+                        
+                        const current = e.results[e.results.length - 1][0].transcript;
+                        
+                        if (isFirstRecognition) {
+                            resultArea.innerText += getTimestamp();
+                            isFirstRecognition = false;
+                        }
+                        
+                        resultArea.innerText += current;
                         resultArea.scrollTop = resultArea.scrollHeight;
+
+                        // 5秒間の無音判定タイマー開始
+                        silenceTimer = setTimeout(handleSilence, 5000);
                     };
+
                     recognition.start();
                     mainBtn.classList.add('active');
+                    isFirstRecognition = true;
                 } catch (err) { alert("マイクへのアクセスを許可してください"); }
             }
         };
@@ -162,7 +196,6 @@
             a.download = `voice_${new Date().getTime()}.m4a`;
             a.click();
         };
-        /* ------------------------------------- */
 
         document.getElementById('save-txt-btn').onclick = () => {
             const text = resultArea.innerText;
@@ -178,6 +211,8 @@
             if(confirm("すべて消去しますか？")) { 
                 resultArea.innerText = ''; 
                 audioChunks = []; 
+                isFirstRecognition = true;
+                clearTimeout(silenceTimer);
             }
         };
     </script>
