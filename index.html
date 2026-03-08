@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>音声・テキストレコーダー v1.9.5</title>
+    <title>音声・テキストレコーダー v1.9.6</title>
     <style>
         :root { 
             --bg-color: #ffffff; 
@@ -122,24 +122,25 @@
     </div>
 
     <script>
-        const APP_VERSION = "1.9.5";
+        const APP_VERSION = "1.9.6";
         let recognition, mediaRecorder, audioChunks = [];
         let silenceTimer = null;
-        let lastTranscript = "";
-        let isFirstRecognition = true;
+        let isAtLineStart = true;
+        let finalTranscript = ""; // 確定した全文を保持
 
         const resultArea = document.getElementById('result-area');
         const mainBtn = document.getElementById('main-btn');
 
         function getTimestamp() {
             const now = new Date();
-            return `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}] `;
+            return `${now.getHours()}時${now.getMinutes()}分${now.getSeconds()}秒 `;
         }
 
         function handleSilence() {
             if (resultArea.innerText.length > 0 && !resultArea.innerText.endsWith('\n')) {
-                resultArea.innerText += '\n';
-                isFirstRecognition = true; // 次の発話時にタイムスタンプを付与
+                finalTranscript = resultArea.innerText + '\n';
+                resultArea.innerText = finalTranscript;
+                isAtLineStart = true;
             }
         }
 
@@ -162,28 +163,34 @@
                     recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
                     recognition.lang = 'ja-JP';
                     recognition.continuous = true;
-                    recognition.interimResults = false; // 文の確定を待つ
+                    recognition.interimResults = true; // リアルタイム表示を有効化
 
                     recognition.onresult = (e) => {
                         clearTimeout(silenceTimer);
-                        
-                        const current = e.results[e.results.length - 1][0].transcript;
-                        
-                        if (isFirstRecognition) {
-                            resultArea.innerText += getTimestamp();
-                            isFirstRecognition = false;
-                        }
-                        
-                        resultArea.innerText += current;
-                        resultArea.scrollTop = resultArea.scrollHeight;
+                        let interimTranscript = "";
 
-                        // 5秒間の無音判定タイマー開始
+                        for (let i = e.resultIndex; i < e.results.length; ++i) {
+                            if (e.results[i].isFinal) {
+                                if (isAtLineStart) {
+                                    finalTranscript += getTimestamp();
+                                    isAtLineStart = false;
+                                }
+                                finalTranscript += e.results[i][0].transcript;
+                            } else {
+                                interimTranscript += e.results[i][0].transcript;
+                            }
+                        }
+
+                        // 確定分 + 現在話している分をリアルタイムに結合
+                        resultArea.innerText = finalTranscript + (isAtLineStart && interimTranscript ? getTimestamp() + interimTranscript : interimTranscript);
+                        if (interimTranscript) isAtLineStart = false; // 話し始めたらフラグを倒す
+
+                        resultArea.scrollTop = resultArea.scrollHeight;
                         silenceTimer = setTimeout(handleSilence, 5000);
                     };
 
                     recognition.start();
                     mainBtn.classList.add('active');
-                    isFirstRecognition = true;
                 } catch (err) { alert("マイクへのアクセスを許可してください"); }
             }
         };
@@ -210,8 +217,9 @@
         document.getElementById('clear-btn').onclick = () => {
             if(confirm("すべて消去しますか？")) { 
                 resultArea.innerText = ''; 
+                finalTranscript = '';
                 audioChunks = []; 
-                isFirstRecognition = true;
+                isAtLineStart = true;
                 clearTimeout(silenceTimer);
             }
         };
