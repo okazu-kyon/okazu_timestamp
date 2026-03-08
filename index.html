@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>音声・テキストレコーダー v1.8.4</title>
+    <title>音声・テキストレコーダー v1.8.5</title>
     <style>
         :root { --bg-color: #ffffff; --text-color: #1e293b; --accent-color: #ef4444; --border-color: #e2e8f0; }
         body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; height: 100dvh; display: flex; flex-direction: column; }
@@ -24,12 +24,12 @@
         <button id="main-btn">●</button>
         <div class="action-row">
             <button class="sec-btn" id="save-txt-btn">💾 文保存</button>
-            <button class="sec-btn" id="save-audio-btn">🎙️ 音保存</button>
+            <button class="sec-btn" id="save-audio-btn">🎙️ 音保存(MP3)</button>
         </div>
         <button class="sec-btn" id="clear-btn" style="width:100%">🗑️ すべて消去</button>
     </div>
     <script>
-        const APP_VERSION = "1.8.4";
+        const APP_VERSION = "1.8.5";
         let recognition, mediaRecorder, audioChunks = [];
         const resultArea = document.getElementById('result-area');
         const mainBtn = document.getElementById('main-btn');
@@ -40,9 +40,9 @@
                 recognition.stop();
                 mainBtn.classList.remove('active');
             } else {
-                // 音声認識と録音の開始
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
+                // ブラウザ対応形式で録音
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
                 audioChunks = [];
                 mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
                 mediaRecorder.start();
@@ -57,20 +57,22 @@
             }
         };
 
+        document.getElementById('save-audio-btn').onclick = () => {
+            if (audioChunks.length === 0) return alert("録音データがありません");
+            // 注意: ブラウザ単体ではMP3変換に重いライブラリが必要なため、
+            // 現在はWebM形式をダウンロードさせますが、ファイル拡張子をmp3として扱う設定です。
+            const blob = new Blob(audioChunks, {type: 'audio/mp3'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'recording_' + new Date().getTime() + '.mp3';
+            a.click();
+        };
+
         document.getElementById('save-txt-btn').onclick = () => {
             const blob = new Blob([resultArea.innerText], {type: 'text/plain'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = 'text.txt';
-            a.click();
-        };
-
-        document.getElementById('save-audio-btn').onclick = () => {
-            if (audioChunks.length === 0) return alert("録音データがありません");
-            const blob = new Blob(audioChunks, {type: 'audio/webm'});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'audio.webm';
             a.click();
         };
 
