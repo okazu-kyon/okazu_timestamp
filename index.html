@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>音声・テキストレコーダー v1.8.5</title>
+    <title>音声・テキストレコーダー v1.8.6</title>
     <style>
         :root { --bg-color: #ffffff; --text-color: #1e293b; --accent-color: #ef4444; --border-color: #e2e8f0; }
         body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; height: 100dvh; display: flex; flex-direction: column; }
@@ -29,7 +29,7 @@
         <button class="sec-btn" id="clear-btn" style="width:100%">🗑️ すべて消去</button>
     </div>
     <script>
-        const APP_VERSION = "1.8.5";
+        const APP_VERSION = "1.8.6";
         let recognition, mediaRecorder, audioChunks = [];
         const resultArea = document.getElementById('result-area');
         const mainBtn = document.getElementById('main-btn');
@@ -41,30 +41,32 @@
                 mainBtn.classList.remove('active');
             } else {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                // ブラウザ対応形式で録音
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
                 audioChunks = [];
-                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                // 録音開始
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) audioChunks.push(e.data);
+                };
                 mediaRecorder.start();
 
+                // 文字起こし開始
                 recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
                 recognition.lang = 'ja-JP';
                 recognition.continuous = true;
                 recognition.interimResults = true;
                 recognition.onresult = (e) => resultArea.innerText = Array.from(e.results).map(r => r[0].transcript).join('');
                 recognition.start();
+                
                 mainBtn.classList.add('active');
             }
         };
 
         document.getElementById('save-audio-btn').onclick = () => {
-            if (audioChunks.length === 0) return alert("録音データがありません");
-            // 注意: ブラウザ単体ではMP3変換に重いライブラリが必要なため、
-            // 現在はWebM形式をダウンロードさせますが、ファイル拡張子をmp3として扱う設定です。
-            const blob = new Blob(audioChunks, {type: 'audio/mp3'});
+            if (audioChunks.length === 0) return alert("録音データが取得されていません。停止後に保存してください。");
+            const blob = new Blob(audioChunks, {type: 'audio/webm'}); // 一旦ブラウザ対応形式で生成
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'recording_' + new Date().getTime() + '.mp3';
+            a.download = 'recording_' + new Date().getTime() + '.mp3'; // 拡張子を強制
             a.click();
         };
 
@@ -77,10 +79,8 @@
         };
 
         document.getElementById('clear-btn').onclick = () => {
-            if(confirm("すべて削除しますか？")) {
-                resultArea.innerText = '';
-                audioChunks = [];
-            }
+            resultArea.innerText = '';
+            audioChunks = [];
         };
     </script>
 </body>
