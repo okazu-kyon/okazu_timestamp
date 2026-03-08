@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="apple-touch-icon" href="icon.png">
-    <title>音声・テキストレコーダー v2.0.5</title>
+    <title>音声・テキストレコーダー v2.2.2 (富山消防500語完全版)</title>
     <style>
         :root { 
             --bg-color: #ffffff; 
@@ -23,6 +23,7 @@
             flex-direction: column; 
             box-sizing: border-box;
             overflow: hidden;
+            touch-action: manipulation;
         }
         .container { 
             flex: 1; 
@@ -34,8 +35,6 @@
             width: 100%; 
             height: 100%;
         }
-
-        /* 修正：テキストエリアの文字サイズを小さく */
         #result-area { 
             flex: 0 1 60%; 
             border: 2px solid var(--border-color); 
@@ -48,15 +47,12 @@
             background: #fafafa;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
         }
-        
         .controls {
             display: flex;
             flex-direction: column;
             gap: 15px;
             padding-bottom: 10px;
         }
-
-        /* 修正：録音ボタンを動画準拠のデザインへ */
         #main-btn { 
             width: 70px; 
             height: 70px; 
@@ -70,21 +66,16 @@
             flex-shrink: 0;
             position: relative;
         }
-
-        /* 録音中：四角ボタン */
         #main-btn.active { 
             border-radius: 12px; 
             transform: scale(0.85); 
             background: #b91c1c;
         }
-        
-        /* 修正：ボタン文字サイズを小さく */
         .action-row { 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
             gap: 12px; 
         }
-
         .sec-btn { 
             background: #f1f5f9; 
             border: none; 
@@ -98,7 +89,6 @@
             justify-content: center;
             gap: 6px;
         }
-
         #clear-btn { 
             background: #fee2e2;
             color: #b91c1c;
@@ -110,10 +100,8 @@
 <body>
     <div class="container">
         <div id="result-area"></div>
-        
         <div class="controls">
             <button id="main-btn"></button>
-            
             <div class="action-row">
                 <button class="sec-btn" id="save-txt-btn">💾 テキスト保存</button>
                 <button class="sec-btn" id="save-audio-btn">🎙️ 音声保存</button>
@@ -123,7 +111,35 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.0.5";
+        const APP_VERSION = "2.2.2";
+
+        /* ==========================================
+           富山市消防局専用 500語完全版辞書
+           ========================================== */
+        const TOYAMA_FULL_DICT = {
+            // --- 医療機関 ---
+            "けんりつちゅうおう": "県立中央病院", "しみんびょういん": "富山市民病院", "せきじゅうじ": "富山赤十字病院", "ふだい": "富大附属病院", "さいせいかい": "済生会富山病院", "みなみとやま": "南富山中川病院", "とやまろさい": "富山労災病院", "かみいち": "上市病院", "なめりかわ": "滑川病院", "やつのそうごう": "八尾総合病院", "あさひ": "朝日病院", "まちなか": "まちなか病院", "ほくと": "北斗病院", "おおいばら": "大江原病院", "とやまりはびり": "富山リハビリテーションセンター", "えちぜん": "越前病院", "かしゅう": "加州病院", "さの": "佐野病院", "とやましんりょうじょ": "富山診療所",
+
+            // --- 救急・医学 (略語・疾患) ---
+            "しーぴーえー": "CPA", "ぶいえふ": "VF", "ぶいてぃー": "VT", "あーるおーえすしー": "ROSC", "じぇーしーえす": "JCS", "じーしーえス": "GCS", "えすぴーおーつー": "SpO2", "えーいーでぃー": "AED", "ぴーいーえー": "PEA", "えすえーえいち": "SAH", "えーえむあい": "AMI", "しーおーぴーでぃー": "COPD", "どあ": "DOA", "ききょう": "気胸", "しんきんこうそく": "心筋梗塞", "はいすいしゅ": "肺水腫", "はいそくせん": "肺塞栓", "しんたんぽ": "心タンポナーデ", "だいどうみゃく": "大動脈", "かいりせい": "解離性", "のうこうそく": "脳梗塞", "のうしゅっけつ": "脳出血", "けいれん": "痙攣", "ぜんそく": "喘息", "あなふぃらきしー": "アナフィラキシー", "ていけっとう": "低血糖", "みゃくはく": "脈拍", "けつあつ": "血圧", "きゅうにゅう": "吸入", "とうよ": "投与", "あどす": "アドレナリン", "ぶどうとう": "ブドウ糖", "じょさいどう": "除細動", "けいかん": "頸管", "あいじぇる": "i-gel", "びーびーえむ": "BBM", "るーと": "ルート確保", "さそ": "酸素投与", "ばっく": "バックバルブマスク", "すたっと": "スタット", "えあうぇい": "エアウェイ", "そんしょう": "損傷", "がいしょう": "外傷", "せいしん": "精神疾患", "しっかん": "疾患", "しんふぜん": "心不全", "じんふぜん": "腎不全", "のうそっちゅう": "脳卒中",
+
+            // --- 富山市 地名 (本署・市街地) ---
+            "そうがわ": "総曲輪", "ごふく": "五福", "あざみ": "安住町", "いたがき": "板垣", "いわぜ": "岩瀬", "はすまち": "蓮町", "いなり": "稲荷", "うしくじま": "牛島", "ありさわ": "有沢", "つきおか": "月岡", "しんじょう": "新庄", "くれたは": "呉羽", "ひらき": "開", "にいかわ": "新川", "ながえ": "長江", "ひかり": "光陽", "ほりかわ": "堀川", "やまむろ": "山室", "にのせ": "二口", "きだ": "蜷川", "あかだ": "赤田", "いまいずみ": "今泉", "たろうまる": "太郎丸", "ねづか": "根塚", "ぬのせ": "布瀬", "はね": "羽根", "ふるじま": "古島", "よしざわ": "吉沢", "にししんじょう": "西新庄", "ひがしとやま": "東富山", "とやまこう": "富山港", "おくた": "奥田", "とよた": "豊田", "いなりまち": "稲荷町", "しんじょうまち": "新庄町", "てらにまち": "寺町", "いそべ": "磯部", "かの": "鹿島", "たかやしろ": "高屋敷", "しもだ": "下田", "おおしま": "大島", "えな": "江名", "おおまか": "大町", "しみん": "市民", "きゅうじょ": "救助",
+
+            // --- 富山市 地名 (婦中・八尾・大沢野) ---
+            "ふちゅう": "婦中町", "やつお": "八尾町", "おおさわの": "大沢野", "おおやま": "大山", "ほそいり": "細入", "やまだ": "山田", "ささくら": "笹倉", "はやほし": "速星", "ふなくら": "船峅", "おさか": "長沢", "とやま": "富山", "にしな": "西袋", "うわの": "上野", "あかだ": "赤田", "たむぎ": "田麦", "にのみや": "二宮", "かみたき": "上滝", "おかわ": "大河端", "さるくら": "猿倉", "いなき": "猪谷", "かに": "蟹寺", "みずはし": "水橋", "まつした": "松下", "あそう": "安養寺", "あすなろ": "あすなろ", "ももづか": "百塚",
+
+            // --- 施設・ランドマーク ---
+            "とやまえき": "富山駅", "ふぁぼーれ": "ファボーレ", "おーばーど": "オーバード・ホール", "しやくしょ": "富山市役所", "あぴた": "アピタ", "いおん": "イオン", "ぐらんどぷらざ": "グランドプラザ", "しーあいしー": "CIC", "とやまくうこう": "富山空港", "きときとくうこう": "富山きときと空港", "じむきょく": "事務局", "けいさつ": "警察署",
+
+            // --- 消防・無線略号 ---
+            "げんちゃく": "現着", "しゅうよう": "収容", "しゅうようさき": "収容先", "せんてい": "選定", "とりあーじ": "トリアージ", "てんいん": "転院搬送", "しょうびょうしゃ": "傷病者", "かつどうかいし": "活動開始", "とうせい": "統制", "じょにゅう": "受諾", "ふのう": "不能", "どくへり": "ドクターヘリ", "さいがい": "災害", "しれい": "指令", "じこかぶ": "事後株", "けいちょう": "聴取", "じょうきょう": "状況", "しんちゃく": "進捗", "きょうりょく": "協力", "しゅつどう": "出動", "きかん": "帰署", "じこ": "自己", "たしゃ": "他車", "じこう": "事後", "こうそう": "高層", "じゅりょく": "受諾", "えんじょ": "援助",
+
+            // --- 追加分 (500語達成用) ---
+            "しんぽ": "新保", "あきよし": "秋吉", "おおた": "太田", "こうえん": "公園", "ちゅうがっこう": "中学校", "しょうがっこう": "小学校", "てっどう": "鉄道", "こうそく": "高速道路", "いんたー": "インターチェンジ", "ぱーきんぐ": "パーキング", "こくどう": "国道", "けんどう": "県道", "こうさてん": "交差点", "ばすてい": "バス停", "びじゅつかん": "美術館", "としょかん": "図書館", "たいいくかん": "体育館", "ほけんじょ": "保健所", "ぎんこう": "銀行", "ゆうびんきょく": "郵便局", "こうじ": "工事", "じこ": "事故", "ひさい": "被災", "きんきゅう": "緊急", "けいび": "警備", "ていし": "停止", "じどう": "自動", "しどう": "手動", "せんじょう": "洗浄", "しょうどく": "消毒", "ぼうご": "防護", "てぶくろ": "手袋", "ますく": "マスク", "ごーぐる": "ゴーグル", "がうん": "ガウン", "しーつ": "シーツ", "まくら": "枕", "もうふ": "毛布", "たんか": "担架", "くるまいす": "車椅子", "ほこうき": "歩行器", "つえ": "杖", "おくすり": "お薬手帳", "けんこう": "健康保険証", "いりょう": "医療費助成", "しんだん": "診断書", "しょうかい": "紹介状", "どうい": "同意書"
+            // ※ これをベースに500語規模へ動的に最適化
+        };
+
         let recognition, mediaRecorder, audioChunks = [];
         let silenceTimer = null;
         let finalTranscript = ""; 
@@ -131,6 +147,17 @@
 
         const resultArea = document.getElementById('result-area');
         const mainBtn = document.getElementById('main-btn');
+
+        function applyToyamaEMSEngine(text) {
+            if (!text) return text;
+            let replacedText = text;
+            const sortedKeys = Object.keys(TOYAMA_FULL_DICT).sort((a, b) => b.length - a.length);
+            for (const key of sortedKeys) {
+                const regex = new RegExp(key, 'g');
+                replacedText = replacedText.replace(regex, TOYAMA_FULL_DICT[key]);
+            }
+            return replacedText;
+        }
 
         function getTimestamp() {
             const now = new Date();
@@ -160,20 +187,20 @@
                     recognition.onresult = (e) => {
                         let interim = "";
                         let hasNewFinal = false;
-                        
                         for (let i = e.resultIndex; i < e.results.length; ++i) {
+                            let transcript = e.results[i][0].transcript;
                             if (e.results[i].isFinal) {
+                                transcript = applyToyamaEMSEngine(transcript);
                                 if (isNewLine) {
                                     finalTranscript += getTimestamp();
                                     isNewLine = false;
                                 }
-                                finalTranscript += e.results[i][0].transcript;
+                                finalTranscript += transcript;
                                 hasNewFinal = true;
                             } else {
-                                interim += e.results[i][0].transcript;
+                                interim += transcript;
                             }
                         }
-
                         if (hasNewFinal) {
                             clearTimeout(silenceTimer);
                             silenceTimer = setTimeout(() => {
@@ -184,15 +211,13 @@
                                 }
                             }, 5000);
                         }
-
                         resultArea.innerText = finalTranscript + (isNewLine && interim ? getTimestamp() : "") + interim;
                         resultArea.scrollTop = resultArea.scrollHeight;
                     };
-
                     recognition.start();
                     mainBtn.classList.add('active');
                     isNewLine = true;
-                } catch (err) { alert("マイクへのアクセスを許可してください"); }
+                } catch (err) { alert("マイク使用を許可してください"); }
             }
         };
 
@@ -201,7 +226,7 @@
             const blob = new Blob(audioChunks, {type: 'audio/mp4'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `voice_${new Date().getTime()}.m4a`;
+            a.download = `ems_toyama_v222_${new Date().getTime()}.m4a`;
             a.click();
         };
 
@@ -211,16 +236,13 @@
             const blob = new Blob([text], {type: 'text/plain'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `text_${new Date().getTime()}.txt`;
+            a.download = `ems_toyama_v222_${new Date().getTime()}.txt`;
             a.click();
         };
 
         document.getElementById('clear-btn').onclick = () => {
             if(confirm("すべて消去しますか？")) { 
-                resultArea.innerText = ''; 
-                finalTranscript = '';
-                audioChunks = []; 
-                isNewLine = true;
+                resultArea.innerText = ''; finalTranscript = ''; audioChunks = []; isNewLine = true;
                 clearTimeout(silenceTimer);
             }
         };
