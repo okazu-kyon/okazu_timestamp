@@ -3,67 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>音声・テキストレコーダー v1.7.9</title>
+    <title>音声・テキストレコーダー v1.8.0</title>
     <style>
-        :root {
-            --bg-color: #ffffff;
-            --text-color: #1e293b;
-            --accent-color: #4f46e5;
-            --border-color: #e2e8f0;
-            --spacing-md: 16px;
-        }
+        :root { --bg-color: #ffffff; --text-color: #1e293b; --accent-color: #4f46e5; --border-color: #e2e8f0; --spacing-md: 16px; }
         body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: var(--spacing-md); height: 100dvh; display: flex; flex-direction: column; }
         .container { flex: 1; display: flex; flex-direction: column; gap: var(--spacing-md); max-width: 500px; margin: 0 auto; width: 100%; }
-        
-        #result-area { flex: 1; border: 1px solid var(--border-color); border-radius: 20px; padding: var(--spacing-md); overflow-y: auto; white-space: pre-wrap; font-size: 1rem; line-height: 1.6; }
-        
-        #settings-panel { display: none; background: #f8fafc; padding: var(--spacing-md); border-radius: 16px; border: 1px solid var(--border-color); }
-        .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        
-        #main-btn { background: var(--accent-color); color: white; border: none; padding: 20px; border-radius: 30px; font-weight: bold; cursor: pointer; transition: background 0.3s; }
+        #result-area { flex: 1; border: 1px solid var(--border-color); border-radius: 20px; padding: var(--spacing-md); overflow-y: auto; white-space: pre-wrap; }
+        #main-btn { background: var(--accent-color); color: white; border: none; padding: 20px; border-radius: 30px; font-weight: bold; }
         #main-btn.recording { background: #ef4444; }
-        
-        .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .sec-btn { background: #f1f5f9; border: none; padding: 12px; border-radius: 16px; cursor: pointer; font-weight: 500; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div style="text-align: right;">
-            <button onclick="document.getElementById('settings-panel').style.display = (document.getElementById('settings-panel').style.display === 'block' ? 'none' : 'block')" style="background:none; border:none; color:#64748b;">⚙️ 設定</button>
-        </div>
-        
-        <div id="settings-panel">
-            <div class="setting-row">
-                <span>感度: <span id="gain-val">x2.5</span></span>
-                <input type="range" id="gain-slider" min="1" max="10" step="0.5" value="2.5">
-            </div>
-            <div class="setting-row">
-                <span>改行: <span id="threshold-val">5秒</span></span>
-                <input type="range" id="threshold-slider" min="1" max="15" value="5">
-            </div>
-        </div>
-
         <div id="result-area"></div>
-        
         <button id="main-btn">録音を開始</button>
-        <div class="action-row">
-            <button class="sec-btn" onclick="navigator.clipboard.writeText(document.getElementById('result-area').innerText)">📋 コピー</button>
-            <button class="sec-btn" id="clear-btn">🗑️ 消去</button>
-        </div>
     </div>
     <script>
-        const APP_VERSION = "1.7.9";
-        // 以前の実装済みロジック（音声認識・レコーダー・消去・設定連動）をここに統合
-        document.getElementById('gain-slider').oninput = (e) => document.getElementById('gain-val').innerText = 'x' + e.target.value;
-        document.getElementById('threshold-slider').oninput = (e) => document.getElementById('threshold-val').innerText = e.target.value + '秒';
-        
-        document.getElementById('clear-btn').onclick = () => {
-            if(confirm("すべて消去しますか？")) {
-                document.getElementById('result-area').innerHTML = '';
+        const APP_VERSION = "1.8.0";
+        const resultArea = document.getElementById('result-area');
+        const mainBtn = document.getElementById('main-btn');
+
+        // 音声認識の初期設定
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'ja-JP';
+        recognition.interimResults = true;
+        recognition.continuous = true;
+
+        let isRecording = false;
+
+        mainBtn.onclick = () => {
+            if (isRecording) {
+                recognition.stop();
+                mainBtn.innerText = "録音を開始";
+                mainBtn.classList.remove('recording');
+            } else {
+                recognition.start();
+                mainBtn.innerText = "録音を停止";
+                mainBtn.classList.add('recording');
             }
+            isRecording = !isRecording;
         };
-        // 録音開始ボタンの切り替え処理等をここに実装
+
+        recognition.onresult = (event) => {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+            }
+            resultArea.innerText = transcript;
+        };
+
+        recognition.onerror = (e) => console.error("音声認識エラー:", e);
     </script>
 </body>
 </html>
