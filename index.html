@@ -3,72 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>音声・テキストレコーダー v1.8.9</title>
+    <title>音声・テキストレコーダー v1.9.1</title>
     <style>
-        :root { --bg-color: #ffffff; --text-color: #1e293b; --accent-color: #ef4444; --border-color: #e2e8f0; }
-        body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; height: 100dvh; display: flex; flex-direction: column; }
-        .container { flex: 1; display: flex; flex-direction: column; gap: 16px; max-width: 500px; margin: 0 auto; width: 100%; }
-        #result-area { flex: 1; border: 1px solid var(--border-color); border-radius: 20px; padding: 16px; overflow-y: auto; white-space: pre-wrap; font-size: 1rem; }
-        #main-btn { 
-            width: 70px; height: 70px; border-radius: 50%; background: var(--accent-color); color: white; 
-            border: none; cursor: pointer; align-self: center; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        :root { 
+            --bg-color: #ffffff; 
+            --text-color: #1e293b; 
+            --accent-color: #ef4444; 
+            --border-color: #e2e8f0; 
         }
-        #main-btn.active { background: #b91c1c; transform: scale(0.95); }
-        .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .sec-btn { background: #f1f5f9; border: none; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 500; }
+        body { 
+            font-family: -apple-system, sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            margin: 0; 
+            padding: 16px; 
+            height: 100dvh; 
+            display: flex; 
+            flex-direction: column; 
+            box-sizing: border-box;
+        }
+        .container { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 16px; 
+            max-width: 500px; 
+            margin: 0 auto; 
+            width: 100%; 
+        }
+
+        /* テキスト枠の上下を80%程度に確保 */
+        #result-area { 
+            flex: 0 0 75%; 
+            border: 2px solid var(--border-color); 
+            border-radius: 20px; 
+            padding: 20px; 
+            overflow-y: auto; 
+            white-space: pre-wrap; 
+            font-size: 1.2rem; /* 文字を大きく */
+            line-height: 1.6;
+        }
+        
+        /* 録音ボタン：アニメーション設定 */
+        #main-btn { 
+            width: 70px; 
+            height: 70px; 
+            border-radius: 50%; 
+            background: var(--accent-color); 
+            border: none; 
+            cursor: pointer; 
+            align-self: center; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        /* 押されたら四角（角丸）になる */
+        #main-btn.active { 
+            border-radius: 20%; 
+            transform: scale(0.7); 
+            background: #b91c1c;
+        }
+        
+        .action-row { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 12px; 
+        }
+
+        /* ボタン文字を大きく見やすく */
+        .sec-btn { 
+            background: #f1f5f9; 
+            border: none; 
+            padding: 16px; 
+            border-radius: 14px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 1.1rem; 
+        }
+
+        #clear-btn { 
+            width: 100%; 
+            margin-top: 4px;
+            background: #fee2e2;
+            color: #b91c1c;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div id="result-area"></div>
-        <button id="main-btn">●</button>
+        
+        <button id="main-btn"></button>
+        
         <div class="action-row">
-            <button class="sec-btn" id="save-txt-btn">💾 文保存</button>
-            <button class="sec-btn" id="save-audio-btn">🎙️ 音保存(再生可能形式)</button>
+            <button class="sec-btn" id="save-txt-btn">💾 テキスト保存</button>
+            <button class="sec-btn" id="save-audio-btn">🎙️ 音声保存</button>
         </div>
-        <button class="sec-btn" id="clear-btn" style="width:100%">🗑️ すべて消去</button>
+        <button class="sec-btn" id="clear-btn">🗑️ すべて消去</button>
     </div>
+
     <script>
-        const APP_VERSION = "1.8.9";
-        let mediaRecorder, audioChunks = [];
+        const APP_VERSION = "1.9.1";
+        let recognition, mediaRecorder, audioChunks = [];
         const resultArea = document.getElementById('result-area');
         const mainBtn = document.getElementById('main-btn');
 
+        /* --- 確定済み録音ロジック (維持) --- */
         mainBtn.onclick = async () => {
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
+                recognition.stop();
                 mainBtn.classList.remove('active');
             } else {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioChunks = [];
-                // iOS Safariでも扱いやすい audio/mp4 (または audio/aac) を優先指定
-                const mimeType = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm';
-                mediaRecorder = new MediaRecorder(stream, { mimeType });
-                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-                mediaRecorder.start();
-                mainBtn.classList.add('active');
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audioChunks = [];
+                    const mimeType = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm';
+                    mediaRecorder = new MediaRecorder(stream, { mimeType });
+                    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+                    mediaRecorder.start();
+
+                    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                    recognition.lang = 'ja-JP';
+                    recognition.continuous = true;
+                    recognition.interimResults = true;
+                    recognition.onresult = (e) => {
+                        resultArea.innerText = Array.from(e.results).map(r => r[0].transcript).join('');
+                        resultArea.scrollTop = resultArea.scrollHeight;
+                    };
+                    recognition.start();
+                    mainBtn.classList.add('active');
+                } catch (err) { console.error("録音開始エラー:", err); }
             }
         };
 
         document.getElementById('save-audio-btn').onclick = () => {
-            if (audioChunks.length === 0) return alert("録音データがありません");
-            // 拡張子を .m4a にすることで、iPhone標準のボイスメモ形式として認識させる
+            if (audioChunks.length === 0) return alert("データがありません");
             const blob = new Blob(audioChunks, {type: 'audio/mp4'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = `voice_${new Date().getTime()}.m4a`;
             a.click();
         };
+        /* ------------------------------------- */
 
-        // 文保存と消去ロジックは以前のまま
         document.getElementById('save-txt-btn').onclick = () => {
-            const blob = new Blob([resultArea.innerText], {type: 'text/plain'});
+            const text = resultArea.innerText;
+            if (!text) return alert("保存するテキストがありません");
+            const blob = new Blob([text], {type: 'text/plain'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'text.txt';
+            a.download = `text_${new Date().getTime()}.txt`;
             a.click();
         };
-        document.getElementById('clear-btn').onclick = () => { resultArea.innerText = ''; audioChunks = []; };
+
+        document.getElementById('clear-btn').onclick = () => {
+            if(confirm("すべて消去しますか？")) { 
+                resultArea.innerText = ''; 
+                audioChunks = []; 
+            }
+        };
     </script>
 </body>
 </html>
