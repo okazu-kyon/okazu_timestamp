@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="apple-touch-icon" href="icon.png">
-    <title>REQ v2.2.6 (富山消防・救急記録サポーター)</title>
+    <title>REQ v2.2.7 (富山消防・救急記録サポーター)</title>
     <style>
         :root { 
             --bg-color: #ffffff; 
@@ -149,7 +149,7 @@
 <body>
     <div id="overlay">
         <div id="guide-box">
-            <h2>富山消防・救急記録サポーター</h2>
+            <h2>富山消防・救急記録サポーター REQ</h2>
             <ul>
                 <li><strong>開始:</strong> 中央の赤ボタンで録音開始。再度押すと停止します。</li>
                 <li><strong>富山辞書:</strong> 総曲輪、婦中、八尾などの地名や専門用語を自動変換します。</li>
@@ -162,7 +162,7 @@
     </div>
 
     <div class="container">
-        <h1 id="header-title">REQ v2.2.6</h1>
+        <h1 id="header-title">REQ v2.2.7</h1>
         <div id="result-area"></div>
         <div class="controls">
             <button id="main-btn"></button>
@@ -181,7 +181,7 @@
         };
 
         /* ==========================================
-           REQ 強制割込辞書 (v2.2.6 最新最適化版)
+           REQ 強制割込辞書 (v2.2.7 ユーザー修正統合版)
            ========================================== */
         const TOYAMA_FORCE_DICT = {
             // --- 超重要・難読・誤変換防止 ---
@@ -232,7 +232,7 @@
             "こうさてん": "交差点", "ばすてい": "バス停", "としょかん": "図書館", "ぎんこう": "銀行",
             "ゆうびんきょく": "郵便局", "こうじ": "工事", "じこ": "事故", "ひさい": "被災", "きんきゅう": "緊急",
             "ていし": "停止", "じどう": "自動", "しどう": "手動", "せんじょう": "洗浄", "しょうどく": "消毒",
-            "ぼうご": "防護", "てぶくろ": "手袋", "ますく": "マスク", "ごーぐる": "ゴーグル", "がうん": "ガウン",
+            "ぼうご": "防護", "てぶくろ": "手袋", "ますく": "マスク", "ごーぐる": "ゴーぐる", "がうん": "ガウン",
             "しーつ": "シーツ", "たんか": "担架", "くるまいす": "車椅子", "おくすり": "お薬手帳", "どうい": "同意書"
         };
 
@@ -308,7 +308,7 @@
         };
 
         document.getElementById('save-audio-btn').onclick = () => {
-            if (audioChunks.length === 0) return alert("録音データがありません");
+            if (audioChunks.length === 0) return alert("データがありません");
             const blob = new Blob(audioChunks, {type: 'audio/mp4'});
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
             a.download = `REQ_audio_${new Date().getTime()}.m4a`; a.click();
@@ -316,7 +316,7 @@
 
         document.getElementById('save-txt-btn').onclick = () => {
             const text = resultArea.innerText;
-            if (!text) return alert("保存するテキストがありません");
+            if (!text) return alert("テキストがありません");
             const blob = new Blob([text], {type: 'text/plain'});
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
             a.download = `REQ_log_${new Date().getTime()}.txt`; a.click();
