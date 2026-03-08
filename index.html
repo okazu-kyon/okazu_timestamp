@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>音声・テキストレコーダー v1.9.1</title>
+    <title>音声・テキストレコーダー v1.9.3</title>
     <style>
         :root { 
             --bg-color: #ffffff; 
@@ -21,49 +21,58 @@
             display: flex; 
             flex-direction: column; 
             box-sizing: border-box;
+            overflow: hidden;
         }
         .container { 
             flex: 1; 
             display: flex; 
             flex-direction: column; 
-            gap: 16px; 
+            gap: 20px; 
             max-width: 500px; 
             margin: 0 auto; 
             width: 100%; 
+            height: 100%;
         }
 
-        /* テキスト枠の上下を80%程度に確保 */
+        /* テキスト枠のサイズを調整（大きすぎないようflex-growを管理） */
         #result-area { 
-            flex: 0 0 75%; 
+            flex: 0 1 60%; /* 最大でも60%程度に抑制 */
             border: 2px solid var(--border-color); 
             border-radius: 20px; 
-            padding: 20px; 
+            padding: 15px; 
             overflow-y: auto; 
             white-space: pre-wrap; 
-            font-size: 1.2rem; /* 文字を大きく */
+            font-size: 1.2rem;
             line-height: 1.6;
+            background: #fafafa;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
         }
         
-        /* 録音ボタン：アニメーション設定 */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding-bottom: 10px;
+        }
+
         #main-btn { 
-            width: 70px; 
-            height: 70px; 
+            width: 65px; 
+            height: 65px; 
             border-radius: 50%; 
             background: var(--accent-color); 
             border: none; 
             cursor: pointer; 
             align-self: center; 
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            flex-shrink: 0;
+            position: relative;
         }
 
-        /* 押されたら四角（角丸）になる */
+        /* 録音中：丸から四角へ */
         #main-btn.active { 
-            border-radius: 20%; 
-            transform: scale(0.7); 
+            border-radius: 15%; 
+            transform: scale(0.75); 
             background: #b91c1c;
         }
         
@@ -73,7 +82,6 @@
             gap: 12px; 
         }
 
-        /* ボタン文字を大きく見やすく */
         .sec-btn { 
             background: #f1f5f9; 
             border: none; 
@@ -82,13 +90,17 @@
             cursor: pointer; 
             font-weight: bold; 
             font-size: 1.1rem; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         #clear-btn { 
-            width: 100%; 
-            margin-top: 4px;
             background: #fee2e2;
             color: #b91c1c;
+            padding: 12px;
+            font-size: 1rem;
         }
     </style>
 </head>
@@ -96,26 +108,28 @@
     <div class="container">
         <div id="result-area"></div>
         
-        <button id="main-btn"></button>
-        
-        <div class="action-row">
-            <button class="sec-btn" id="save-txt-btn">💾 テキスト保存</button>
-            <button class="sec-btn" id="save-audio-btn">🎙️ 音声保存</button>
+        <div class="controls">
+            <button id="main-btn"></button>
+            
+            <div class="action-row">
+                <button class="sec-btn" id="save-txt-btn">💾 テキスト保存</button>
+                <button class="sec-btn" id="save-audio-btn">🎙️ 音声保存</button>
+            </div>
+            <button class="sec-btn" id="clear-btn">🗑️ すべて消去</button>
         </div>
-        <button class="sec-btn" id="clear-btn">🗑️ すべて消去</button>
     </div>
 
     <script>
-        const APP_VERSION = "1.9.1";
+        const APP_VERSION = "1.9.3";
         let recognition, mediaRecorder, audioChunks = [];
         const resultArea = document.getElementById('result-area');
         const mainBtn = document.getElementById('main-btn');
 
-        /* --- 確定済み録音ロジック (維持) --- */
+        /* --- 確定済み録音ロジック (変更禁止) --- */
         mainBtn.onclick = async () => {
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
-                recognition.stop();
+                if (recognition) recognition.stop();
                 mainBtn.classList.remove('active');
             } else {
                 try {
@@ -136,7 +150,7 @@
                     };
                     recognition.start();
                     mainBtn.classList.add('active');
-                } catch (err) { console.error("録音開始エラー:", err); }
+                } catch (err) { alert("マイクへのアクセスを許可してください"); }
             }
         };
 
@@ -152,7 +166,7 @@
 
         document.getElementById('save-txt-btn').onclick = () => {
             const text = resultArea.innerText;
-            if (!text) return alert("保存するテキストがありません");
+            if (!text) return alert("テキストがありません");
             const blob = new Blob([text], {type: 'text/plain'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
