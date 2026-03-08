@@ -1,252 +1,44 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>音声・テキストレコーダー v1.7.2</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <title>音声・テキストレコーダー v1.7.7</title>
     <style>
+        /* ステップ4: カラーパレットをライトモードへ刷新 */
         :root {
-            --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.7); --accent-color: #0ea5e9;
-            --active-color: #10b981; --stop-color: #ef4444; --text-color: #f8fafc;
-            --text-muted: #94a3b8; --timestamp-color: #38bdf8; --border-radius: 16px;
+            --bg-color: #ffffff;
+            --card-bg: #f8fafc;
+            --text-color: #1e293b;
+            --text-muted: #64748b;
+            --accent-color: #4f46e5; /* ターゲットデザイン風のブルー */
+            --border-color: #e2e8f0;
+            --spacing-md: 16px;
         }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); background-image: radial-gradient(circle at top right, #1e293b, #0f172a); color: var(--text-color); margin: 0; padding: 12px; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; align-items: center; }
-        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; height: 100%; gap: 10px; }
-        #meter-container { width: 100%; height: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 3px; overflow: hidden; }
-        #meter-bar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--active-color), #34d399); transition: width 0.1s ease-out; }
-        #diag-panel { background: rgba(0, 0, 0, 0.3); padding: 6px 12px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; display: flex; justify-content: space-between; color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.05); }
-        #main-btn { touch-action: manipulation; width: 100%; background: var(--accent-color); color: white; border: none; border-radius: 14px; padding: 14px; font-size: 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
-        #main-btn.recording { background: var(--stop-color); animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
-        #result-area { flex: 1; background: var(--card-bg); backdrop-filter: blur(12px); border-radius: 14px; padding: 20px; overflow-y: auto; font-size: 18px; line-height: 1.6; white-space: pre-wrap; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2); min-height: 0; }
-        .timestamp { color: var(--timestamp-color); font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: rgba(56, 189, 248, 0.1); padding: 1px 4px; border-radius: 3px; margin-right: 8px; }
-        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(255, 255, 255, 0.03); padding: 10px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); }
-        .setting-item { display: flex; flex-direction: column; gap: 4px; }
-        .setting-label { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); }
-        input[type="range"] { height: 6px; width: 100%; cursor: pointer; }
-        .bottom-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-        .sec-btn { background: rgba(255, 255, 255, 0.05); color: white; border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
-        .save-btn { background: var(--active-color); border: none; }
-        #version-tag { text-align: center; font-size: 0.65rem; color: var(--text-muted); opacity: 0.6; margin-top: 4px; cursor: pointer; text-decoration: underline; }
-        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px); }
-        .modal-content { background: #1e293b; margin: 15% auto; padding: 24px; border-radius: 20px; width: 90%; max-width: 400px; color: white; }
+
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: var(--spacing-md); height: 100dvh; display: flex; flex-direction: column; align-items: center; }
+        
+        .container { width: 100%; max-width: 500px; height: 100%; display: flex; flex-direction: column; gap: var(--spacing-md); }
+        
+        #result-area { flex: 1; background: var(--card-bg); border-radius: 20px; padding: var(--spacing-md); overflow-y: auto; white-space: pre-wrap; border: 1px solid var(--border-color); color: var(--text-color); }
+        
+        #settings-panel { display: none; background: #f1f5f9; padding: var(--spacing-md); border-radius: 16px; font-size: 0.85rem; color: var(--text-muted); }
+        
+        .action-row { display: flex; gap: 10px; }
+        .sec-btn { flex: 1; background: #ffffff; color: var(--text-color); border: 1px solid var(--border-color); padding: 14px; border-radius: 16px; cursor: pointer; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
     </style>
 </head>
-
 <body>
     <div class="container">
-        <div id="meter-container"><div id="meter-bar"></div></div>
-        <div id="diag-panel">
-            <div>状態: <span id="diag-state">待機中</span></div>
-            <div>音声保存: <span id="diag-rec">OFF</span></div>
-        </div>
-        <button id="main-btn">
-            <span id="rec-dot" style="width:12px;height:12px;background:white;border-radius:50%;display:none;"></span>
-            <span id="btn-text">録音・文字起こしを開始</span>
-        </button>
+        <button onclick="document.getElementById('settings-panel').style.display = document.getElementById('settings-panel').style.display === 'block' ? 'none' : 'block'" style="background:none; border:none; color:var(--text-muted); text-align:right; font-size: 0.9rem;">⚙️ 設定</button>
+        <div id="settings-panel">設定項目をここに集約。</div>
         <div id="result-area"></div>
-        <div id="error-display" style="color:var(--stop-color); font-size:11px; text-align:center;"></div>
-        <div class="settings-grid">
-            <div class="setting-item">
-                <div class="setting-label"><span>マイク感度</span><span id="gain-val">x2.5</span></div>
-                <input type="range" id="gain-slider" min="1" max="10" step="0.5" value="2.5">
-            </div>
-            <div class="setting-item">
-                <div class="setting-label"><span>無音で改行</span><span id="threshold-val">5秒</span></div>
-                <input type="range" id="threshold-slider" min="1" max="15" step="1" value="5">
-            </div>
-        </div>
-        <div class="bottom-btns">
-            <button id="copy-btn" class="sec-btn">📋 コピー</button>
-            <button id="save-btn" class="sec-btn save-btn">💾 保存</button>
-            <button id="clear-btn" class="sec-btn">🗑️ 消去</button>
-        </div>
-        <div id="version-tag" onclick="document.getElementById('helpModal').style.display='block'"></div>
-    </div>
-
-    <div id="helpModal" class="modal">
-        <div class="modal-content">
-            <h3 style="color:var(--accent-color); margin-top:0;">💡 使い方</h3>
-            <button onclick="this.parentElement.parentElement.style.display='none'" style="width:100%; padding:12px; background:var(--accent-color); border:none; border-radius:10px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">閉じる</button>
+        <div class="action-row">
+            <button id="clear-btn" class="sec-btn">消去</button>
         </div>
     </div>
-
     <script>
-        const APP_VERSION = "1.7.2";
-        const config = { lang: 'ja-JP', continuous: true, interimResults: true, maxAlternatives: 1 };
-        
-        let blankThreshold = 5000;
-        let meterGain = 2.5;
-        let isRecording = false;
-        let recognition = null;
-        let audioContext = null;
-        let analyser = null;
-        let dataArray = null;
-        let mediaRecorder = null;
-        let activeStream = null;
-        let audioChunks = [];
-        let audioBlob = null;
-        let lastSpeechTime = 0;
-        let fullLogHTML = '';
-
-        const mainBtn = document.getElementById('main-btn');
-        const btnText = document.getElementById('btn-text');
-        const resultArea = document.getElementById('result-area');
-        const meterBar = document.getElementById('meter-bar');
-        const dState = document.getElementById('diag-state');
-        const dRec = document.getElementById('diag-rec');
-        const gainSlider = document.getElementById('gain-slider');
-        const gainVal = document.getElementById('gain-val');
-        const thresholdSlider = document.getElementById('threshold-slider');
-        const thresholdVal = document.getElementById('threshold-val');
-
-        window.onload = () => {
-            document.title = `音声・テキストレコーダー v${APP_VERSION}`;
-            document.getElementById('version-tag').innerText = `Version ${APP_VERSION}`;
-
-            const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (Speech) {
-                recognition = new Speech();
-                Object.assign(recognition, config);
-                setupRecognitionEvents();
-            }
-        };
-
-        // 消去ロジックの完全強化
-        document.getElementById('clear-btn').onclick = () => {
-            if (isRecording) {
-                alert("録音中は消去できません");
-                return;
-            }
-            if (confirm("記録と録音データを完全に消去しますか？")) {
-                fullLogHTML = '';
-                audioChunks = [];
-                audioBlob = null;
-                lastSpeechTime = 0;
-                
-                // 表示領域の全残留データ削除
-                resultArea.innerHTML = '';
-                
-                dRec.innerText = "OFF";
-                console.log("すべてのデータを消去しました");
-            }
-        };
-
-        // --- 以下 v1.7.0 継承 ---
-        gainSlider.oninput = (e) => { meterGain = parseFloat(e.target.value); gainVal.innerText = `x${meterGain}`; };
-        thresholdSlider.oninput = (e) => { blankThreshold = parseInt(e.target.value) * 1000; thresholdVal.innerText = `${e.target.value}秒`; };
-
-        async function initAudioAndRecorder() {
-            if (!activeStream) {
-                activeStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;
-                const source = audioContext.createMediaStreamSource(activeStream);
-                source.connect(analyser);
-                dataArray = new Uint8Array(analyser.frequencyBinCount);
-            }
-            if (audioContext.state === 'suspended') await audioContext.resume();
-            mediaRecorder = new MediaRecorder(activeStream);
-            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                dRec.innerText = "保存可能";
-            };
-        }
-
-        function setupRecognitionEvents() {
-            recognition.onresult = (event) => {
-                let interim = '';
-                const now = Date.now();
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        if (now - lastSpeechTime > blankThreshold || fullLogHTML === '') {
-                            fullLogHTML += (fullLogHTML ? '<br>' : '') + `<span class="timestamp">${new Date().toLocaleTimeString()}</span> `;
-                        }
-                        fullLogHTML += event.results[i][0].transcript + ' ';
-                        lastSpeechTime = now;
-                    } else {
-                        interim += event.results[i][0].transcript;
-                    }
-                }
-                resultArea.innerHTML = fullLogHTML + (interim ? `<span style="color:var(--active-color); opacity:0.7;">${interim}</span>` : '');
-                resultArea.scrollTop = resultArea.scrollHeight;
-            };
-            recognition.onend = () => {
-                if (isRecording) {
-                    setTimeout(() => { if (isRecording) try { recognition.start(); } catch (e) { } }, 200);
-                }
-            };
-        }
-
-        mainBtn.onclick = async () => {
-            if (!isRecording) {
-                try {
-                    await initAudioAndRecorder();
-                    audioChunks = [];
-                    audioBlob = null;
-                    isRecording = true;
-                    btnText.innerText = "録音を停止・保存可能にする";
-                    mainBtn.classList.add('recording');
-                    document.getElementById('rec-dot').style.display = 'inline-block';
-                    recognition.start();
-                    mediaRecorder.start();
-                    dRec.innerText = "録音中...";
-                    dState.innerText = "認識中";
-                    updateMeter();
-                } catch (e) { alert("マイクの使用を許可してください"); }
-            } else {
-                isRecording = false;
-                btnText.innerText = "録音・文字起こしを開始";
-                mainBtn.classList.remove('recording');
-                document.getElementById('rec-dot').style.display = 'none';
-                recognition.stop();
-                mediaRecorder.stop();
-                dState.innerText = "停止中";
-            }
-        };
-
-        function updateMeter() {
-            if (!isRecording) {
-                document.getElementById('meter-bar').style.width = '0%';
-                return;
-            }
-            analyser.getByteFrequencyData(dataArray);
-            let max = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-                if (dataArray[i] > max) max = dataArray[i];
-            }
-            document.getElementById('meter-bar').style.width = Math.min((max / 255) * 100 * meterGain, 100) + '%';
-            requestAnimationFrame(updateMeter);
-        }
-
-        document.getElementById('save-btn').onclick = () => {
-            if (!fullLogHTML && !audioBlob) { alert("保存するデータがありません"); return; }
-            const fileName = `記録_${new Date().toLocaleString().replace(/[\/: ]/g, '_')}`;
-            if (fullLogHTML) download(resultArea.innerText, `${fileName}.txt`, 'text/plain');
-            if (audioBlob) download(audioBlob, `${fileName}.webm`, 'audio/webm');
-        };
-
-        document.getElementById('copy-btn').onclick = () => {
-            if (!fullLogHTML) return;
-            navigator.clipboard.writeText(resultArea.innerText).then(() => alert("コピーしました"));
-        };
-
-        function download(content, name, type) {
-            const blob = content instanceof Blob ? content : new Blob([content], { type });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = name;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
+        const APP_VERSION = "1.7.7";
     </script>
 </body>
 </html>
