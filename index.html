@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>音声・テキストレコーダー v1.9.6</title>
+    <title>音声・テキストレコーダー v1.9.8</title>
     <style>
         :root { 
             --bg-color: #ffffff; 
@@ -122,11 +122,11 @@
     </div>
 
     <script>
-        const APP_VERSION = "1.9.6";
+        const APP_VERSION = "1.9.8";
         let recognition, mediaRecorder, audioChunks = [];
         let silenceTimer = null;
-        let isAtLineStart = true;
-        let finalTranscript = ""; // 確定した全文を保持
+        let finalTranscript = ""; 
+        let isNewLine = true;
 
         const resultArea = document.getElementById('result-area');
         const mainBtn = document.getElementById('main-btn');
@@ -136,11 +136,13 @@
             return `${now.getHours()}時${now.getMinutes()}分${now.getSeconds()}秒 `;
         }
 
+        // 5秒無音時の改行処理
         function handleSilence() {
-            if (resultArea.innerText.length > 0 && !resultArea.innerText.endsWith('\n')) {
-                finalTranscript = resultArea.innerText + '\n';
+            if (finalTranscript !== "" && !finalTranscript.endsWith('\n')) {
+                finalTranscript += '\n';
                 resultArea.innerText = finalTranscript;
-                isAtLineStart = true;
+                isNewLine = true;
+                console.log("5秒無音により改行しました");
             }
         }
 
@@ -163,17 +165,17 @@
                     recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
                     recognition.lang = 'ja-JP';
                     recognition.continuous = true;
-                    recognition.interimResults = true; // リアルタイム表示を有効化
+                    recognition.interimResults = true;
 
                     recognition.onresult = (e) => {
-                        clearTimeout(silenceTimer);
+                        clearTimeout(silenceTimer); // 音声が反応したらタイマーリセット
                         let interimTranscript = "";
 
                         for (let i = e.resultIndex; i < e.results.length; ++i) {
                             if (e.results[i].isFinal) {
-                                if (isAtLineStart) {
+                                if (isNewLine) {
                                     finalTranscript += getTimestamp();
-                                    isAtLineStart = false;
+                                    isNewLine = false;
                                 }
                                 finalTranscript += e.results[i][0].transcript;
                             } else {
@@ -181,16 +183,19 @@
                             }
                         }
 
-                        // 確定分 + 現在話している分をリアルタイムに結合
-                        resultArea.innerText = finalTranscript + (isAtLineStart && interimTranscript ? getTimestamp() + interimTranscript : interimTranscript);
-                        if (interimTranscript) isAtLineStart = false; // 話し始めたらフラグを倒す
+                        let displayPrefix = isNewLine && interimTranscript ? getTimestamp() : "";
+                        if (displayPrefix) isNewLine = false;
 
+                        resultArea.innerText = finalTranscript + displayPrefix + interimTranscript;
                         resultArea.scrollTop = resultArea.scrollHeight;
+                        
+                        // 次の無音判定を開始
                         silenceTimer = setTimeout(handleSilence, 5000);
                     };
 
                     recognition.start();
                     mainBtn.classList.add('active');
+                    isNewLine = true;
                 } catch (err) { alert("マイクへのアクセスを許可してください"); }
             }
         };
@@ -219,7 +224,7 @@
                 resultArea.innerText = ''; 
                 finalTranscript = '';
                 audioChunks = []; 
-                isAtLineStart = true;
+                isNewLine = true;
                 clearTimeout(silenceTimer);
             }
         };
