@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>音声・テキストレコーダー v1.9.9</title>
+    <title>音声・テキストレコーダー v2.0.2</title>
     <style>
         :root { 
             --bg-color: #ffffff; 
@@ -109,7 +109,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "1.9.9";
+        const APP_VERSION = "2.0.2";
         let recognition, mediaRecorder, audioChunks = [];
         let silenceTimer = null;
         let finalTranscript = ""; 
@@ -121,17 +121,6 @@
         function getTimestamp() {
             const now = new Date();
             return `${now.getHours()}時${now.getMinutes()}分${now.getSeconds()}秒 `;
-        }
-
-        function resetSilenceTimer() {
-            clearTimeout(silenceTimer);
-            silenceTimer = setTimeout(() => {
-                if (finalTranscript !== "" && !finalTranscript.endsWith('\n')) {
-                    finalTranscript += '\n';
-                    resultArea.innerText = finalTranscript;
-                    isNewLine = true;
-                }
-            }, 5000);
         }
 
         mainBtn.onclick = async () => {
@@ -155,8 +144,9 @@
                     recognition.interimResults = true;
 
                     recognition.onresult = (e) => {
-                        resetSilenceTimer();
                         let interim = "";
+                        let hasNewFinal = false;
+                        
                         for (let i = e.resultIndex; i < e.results.length; ++i) {
                             if (e.results[i].isFinal) {
                                 if (isNewLine) {
@@ -164,10 +154,24 @@
                                     isNewLine = false;
                                 }
                                 finalTranscript += e.results[i][0].transcript;
+                                hasNewFinal = true;
                             } else {
                                 interim += e.results[i][0].transcript;
                             }
                         }
+
+                        // 新しい確定文があればタイマーをリセット
+                        if (hasNewFinal) {
+                            clearTimeout(silenceTimer);
+                            silenceTimer = setTimeout(() => {
+                                if (finalTranscript !== "" && !finalTranscript.endsWith('\n')) {
+                                    finalTranscript += '\n';
+                                    resultArea.innerText = finalTranscript;
+                                    isNewLine = true;
+                                }
+                            }, 5000);
+                        }
+
                         resultArea.innerText = finalTranscript + (isNewLine && interim ? getTimestamp() : "") + interim;
                         resultArea.scrollTop = resultArea.scrollHeight;
                     };
@@ -179,7 +183,7 @@
             }
         };
 
-        // 保存系・消去系のロジックは変更なし
+        // 保存・消去ロジックは不変
         document.getElementById('save-audio-btn').onclick = () => {
             if (audioChunks.length === 0) return alert("データがありません");
             const blob = new Blob(audioChunks, {type: 'audio/mp4'});
