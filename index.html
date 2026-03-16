@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="apple-touch-icon" href="icon.png">
-    <title>REQ v2.3.1 (富山消防・救急記録サポーター)</title>
+    <title>REQ v2.5.0 (富山消防・救急記録サポーター)</title>
     <style>
         :root { 
             --bg-color: #ffffff; 
             --text-color: #1e293b; 
             --accent-color: #ef4444; 
             --border-color: #e2e8f0; 
+            --tab-inactive: #94a3b8;
         }
         body { 
             font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; 
@@ -25,442 +26,243 @@
             overflow: hidden;
             touch-action: manipulation;
         }
-        /* ポップアップガイド */
-        #overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
+        
+        /* ヘッダー・設定 */
+        .header-row {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            z-index: 1000;
+            margin-bottom: 10px;
         }
-        #guide-box {
-            background: white;
-            width: 85%;
-            max-width: 400px;
-            padding: 24px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        #guide-box h2 {
-            margin-top: 0;
-            font-size: 1.2rem;
-            color: var(--accent-color);
+        #header-title { font-weight: 800; font-size: 1.1rem; color: var(--accent-color); margin: 0; }
+        #settings-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; }
+
+        /* タブUI */
+        .tab-container {
+            display: flex;
             border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
+            margin-bottom: 10px;
         }
-        #guide-box ul {
-            padding-left: 20px;
-            font-size: 0.85rem;
-            line-height: 1.6;
-            margin: 15px 0;
-        }
-        #guide-box li { margin-bottom: 8px; }
-        #close-guide {
-            width: 100%;
-            padding: 14px;
-            background: var(--accent-color);
-            color: white;
-            border: none;
-            border-radius: 12px;
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px 0;
             font-weight: bold;
-            font-size: 1rem;
+            color: var(--tab-inactive);
             cursor: pointer;
+            position: relative;
+            transition: color 0.3s;
+        }
+        .tab.active {
+            color: var(--text-color);
+        }
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--text-color);
         }
 
-        .container { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 20px; 
-            max-width: 500px; 
-            margin: 0 auto; 
-            width: 100%; 
-            height: 100%;
-        }
-        #header-title {
-            text-align: center;
-            font-weight: 800;
-            font-size: 1.2rem;
-            margin: 0;
-            color: var(--accent-color);
-        }
-        #result-area { 
-            flex: 0 1 60%; 
-            border: 2px solid var(--border-color); 
-            border-radius: 20px; 
-            padding: 15px; 
-            overflow-y: auto; 
-            white-space: pre-wrap; 
-            font-size: 0.9rem; 
-            line-height: 1.6;
+        /* 表示エリア */
+        .content-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
             background: #fafafa;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+            margin-bottom: 15px;
         }
-        .controls {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            padding-bottom: 10px;
+        .panel {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            display: none;
+            white-space: pre-wrap;
+            font-size: 0.95rem;
+            line-height: 1.6;
         }
+        .panel.active { display: block; }
+        
+        /* ボタン類 */
+        .controls { display: flex; flex-direction: column; gap: 12px; }
+        .main-btn-row { display: flex; justify-content: center; align-items: center; gap: 20px; }
         #main-btn { 
-            width: 70px; 
-            height: 70px; 
-            border-radius: 50%; 
-            background: var(--accent-color); 
-            border: none; 
-            cursor: pointer; 
-            align-self: center; 
-            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5);
-            flex-shrink: 0;
+            width: 64px; height: 64px; border-radius: 50%; 
+            background: var(--accent-color); border: none; cursor: pointer;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
         }
-        #main-btn.active { 
-            border-radius: 12px; 
-            transform: scale(0.85); 
-            background: #b91c1c;
-        }
-        .action-row { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 12px; 
-        }
+        #main-btn.active { border-radius: 12px; background: #b91c1c; transform: scale(0.9); }
+        
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .sec-btn { 
-            background: #f1f5f9; 
-            border: none; 
-            padding: 12px; 
-            border-radius: 12px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 0.9rem; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
+            background: #f1f5f9; border: none; padding: 12px; border-radius: 10px; 
+            font-weight: bold; font-size: 0.85rem; cursor: pointer;
         }
-        #clear-btn { 
-            background: #fee2e2;
-            color: #b91c1c;
-            padding: 12px;
+        #ai-btn { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+
+        /* モーダル */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 2000;
+        }
+        .modal-content {
+            background: white; width: 85%; max-width: 350px; padding: 20px; border-radius: 15px;
+        }
+        input[type="password"] {
+            width: 100%; padding: 10px; margin: 10px 0; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box;
         }
     </style>
 </head>
 <body>
-    <div id="overlay">
-        <div id="guide-box">
-            <h2>富山消防・救急記録サポーター REQ</h2>
-            <ul>
-                <li><strong>開始:</strong> 中央の赤ボタンで録音開始。再度押すと停止します。</li>
-                <li><strong>プロ辞書:</strong> 消防符牒、救急医学用語、トリアージ用語、富山地名を網羅。</li>
-                <li><strong>自動改行:</strong> 5秒間の沈黙を検知すると、時刻を挿入して自動で改行します。</li>
-                <li><strong>データ保存:</strong> 終了後、テキストや音声を個別保存可能です。</li>
-                <li><strong>機密保持:</strong> 取り扱う個人情報の管理には十分注意してください。</li>
-            </ul>
-            <button id="close-guide">了解して使用を開始する</button>
-        </div>
+
+<div class="header-row">
+    <h1 id="header-title">REQ v2.5.0</h1>
+    <button id="settings-btn">⚙️</button>
+</div>
+
+<div class="tab-container">
+    <div class="tab active" id="tab-summary" onclick="switchTab('summary')">AI要約</div>
+    <div class="tab" id="tab-transcript" onclick="switchTab('transcript')">文字起こし</div>
+</div>
+
+<div class="content-area">
+    <div id="panel-summary" class="panel active">AI要約ボタンを押すと、ここに整形された報告書が表示されます。</div>
+    <div id="panel-transcript" class="panel"></div>
+</div>
+
+<div class="controls">
+    <div class="main-btn-row">
+        <button id="main-btn"></button>
     </div>
-
-    <div class="container">
-        <h1 id="header-title">REQ v2.3.1</h1>
-        <div id="result-area"></div>
-        <div class="controls">
-            <button id="main-btn"></button>
-            <div class="action-row">
-                <button class="sec-btn" id="save-txt-btn">💾 テキスト保存</button>
-                <button class="sec-btn" id="save-audio-btn">🎙️ 音声保存</button>
-            </div>
-            <button class="sec-btn" id="clear-btn">🗑️ すべて消去</button>
-        </div>
+    <div class="action-grid">
+        <button class="sec-btn" id="ai-btn">✨ AI要約作成</button>
+        <button class="sec-btn" id="save-txt-btn">💾 テキスト保存</button>
     </div>
+    <button class="sec-btn" id="clear-btn" style="color: #ef4444;">🗑️ すべて消去</button>
+</div>
 
-    <script>
-        // ポップアップを閉じる
-        document.getElementById('close-guide').onclick = () => {
-            document.getElementById('overlay').style.display = 'none';
-        };
+<div id="settings-modal" class="modal">
+    <div class="modal-content">
+        <h3>Gemini API設定</h3>
+        <p style="font-size: 0.8rem; color: #64748b;">Google AI Studioで取得したAPIキーを入力してください。</p>
+        <input type="password" id="api-key-input" placeholder="AIzaSy...">
+        <button class="sec-btn" id="save-settings" style="width: 100%; background: var(--text-color); color: white;">保存して閉じる</button>
+    </div>
+</div>
 
-        /* ==========================================
-            REQ 強制割込辞書 (v2.3.1 プロ仕様統合版)
-           ========================================== */
-        const TOYAMA_FORCE_DICT = {
-            "そうがわ": "総曲輪", "さがわ": "総曲輪", "ふちゅう": "婦中町", "やつお": "八尾町",
-            "ごふく": "五福", "みずはし": "水橋", "いわせ": "岩瀬", "いたがき": "板垣", "あざみ": "安住町",
-            "おおさわの": "大沢野", "おおやま": "大山", "ほそいり": "細入", "やまだ": "山田",
-            "ひゃくづか": "百塚", "におり": "荷織", "うわの": "上野", "ひらき": "開", "にいかわ": "新川",
-            "ありさわ": "有沢", "つきおか": "月岡", "しんじょう": "新庄", "くれは": "呉羽",
-            "たろうまる": "太郎丸", "ねづか": "根塚", "ぬのせ": "布瀬", "はね": "羽根", "いまいずみ": "今泉",
-            "ほりかわ": "堀川", "やまむろ": "山室", "たかやしろ": "高屋敷",
-            "にながわ": "蜷川", "あかだ": "赤田", "おおしま": "大島", "おおまち": "大町",
-            "かみだき": "上滝", "いのたに": "猪谷", "かにでら": "蟹寺", "あんようぼう": "安養寺",
-            "しんぼ": "新保", "あkiよし": "秋吉", "おおた": "太田", "はすまち": "蓮町", "こうよう": "光陽",
-            "ふたくち": "二口", "たばたけ": "田畠", "にしのみや": "西宮", "おくだ": "奥田", "とよタ": "豊田",
-            "ちゅうおうびょういん": "県立中央病院", "しみんびょういん": "富山市民病院", "せきじゅうじ": "富山赤十字病院",
-            "とみだい": "富山大学附属病院", "さいせいかい": "済生会富山病院", 
-            "とやまろうさい": "富山労災病院", "かみいちびょういん": "上市総合病院", "なめりかわ": "滑川病院", 
-            "やつおそうごうびょういん": "八尾総合病院", "まちなか": "まちなか病院", 
-            "とやまりはびり": "富山リハビリテーションセンター", "とやまえき": "富山駅", "ふぁぼーれ": "ファボーレ", 
-            "おーばーど": "オーバード・ホール", "しやくしょ": "富山市役所", "あぴた": "アピタ", "いおん": "イオン", 
-            "ぐらんどぷらざ": "グランドプラザ", "とやまくうこう": "富山空港", "しっく": "CIC",
+<script>
+    let recognition;
+    let finalTranscript = "";
+    let isNewLine = true;
+    let silenceTimer = null;
 
-            "あーぶい": "指揮車", "あーるしーえー": "心拍再開", "あいしーゆー": "集中治療室",
-            "あおたぐ": "軽症(緑)", "あかたぐ": "重症(赤)", "あくとぱるす": "AutoPulse",
-            "あどれなりん": "アドレナリン", "あなふぃら": "アナフィラキシー",
-            "あしもとちゅうい": "足元注意", "あっか": "状態悪化", "あっぱくしけつ": "圧迫止血",
-            "あっぺ": "虫垂炎", "あぷがー": "エーサップ", "あび": "救急車",
-            "あま": "急性心筋梗塞", "あんせい": "安静", "あんぜんかくにん": "安全確認",
-            "あんぷる": "AMPLE法", "いーあーる": "救急外来", "いちいちきゅう": "百十九番",
-            "いじ": "生命維持", "いちにゆうどうしんでんず": "12誘導心電図",
-            "いれうす": "腸閉塞", "いろう": "胃瘻", "いんとう": "咽頭",
-            "うぉーむぞーん": "ウォームゾーン", "うんてん": "緊急運転", "うそくよし": "右側よし",
-            "えーいーでぃー": "AED", "えあうえい": "エアウェイ", "えいちあーる": "HR",
-            "えし": "壊死", "えすぴーおーつー": "SpO2", "えぬきゅうごますく": "N95マスク",
-            "えぬえすえー": "狭心症", "えんじょう": "延焼", "えんちょうこーど": "延長コード",
-            "おうだん": "黄疸", "おうじゅ": "応需", "おうと": "嘔吐", "おしん": "悪心",
-            "おーとぱるす": "AutoPulse", "おーばー": "オーバー", "おーぴーきゅーあーるえすてぃー": "OPQRST法",
-            "かがくこきゅう": "下顎呼吸", "かがくたい": "化学隊", "かじょう": "下乗",
-            "かし": "下肢", "かふ": "カフ", "かふかん流": "灌流", "かかんき": "過換気症候群",
-            "かたい": "下腿", "かつどう": "作動確認", "かにゅーら": "鼻カニューラ",
-            "かにゅーれ": "カニューレ", "かぶ": "下部", "かんせんぼうご": "感染防護",
-            "かんそう": "転院搬送", "かんし": "持続監視", "かんぞう": "肝臓",
-            "かんつうしょう": "貫通傷", "がい": "臥位", "がいじどうしゅっけつ": "外耳道出血",
-            "がいしょうせいしょっく": "外傷性ショック", "がーぜ": "ガーゼ",
-            "がばん": "骨盤", "きかんいん": "運転員", "きかんそうかん": "気管挿管",
-            "ききゅう": "気胸", "きどう": "気道", "きどうかくほ": "気道確保",
-            "きどうねっしょう": "気道熱傷", "きどうへいそく": "気道閉塞", "きにょう": "既往",
-            "きゅういん": "吸引", "きゅうきゅうきゅうめいし": "救命士",
-            "きゅうきゅうこうじょう": "救急向上", "きゅうきゅうしれい": "救急指令",
-            "きゅうきゅうしんそう": "救急真相", "きゅうきゅうてちょう": "救急手帳",
-            "きゅうきゅうばこ": "救急箱", "きゅうきゅうばさみ": "救急鋏",
-            "きゅうきゅうたい": "救急隊", "きゅうじょ": "救助", "きゅうじょたい": "救助隊",
-            "きゅうじょしゃ": "救助車", "きょじょう": "挙上", "きょけつ": "虚血",
-            "きたぐ": "中等症(黄)", "きんきゅうそうこう": "緊急走行",
-            "きんこーちょく": "筋硬直", "きんちょうききゅう": "緊張性気胸",
-            "ぎし": "義歯", "ぎゃくとれんでれんぶるぐ": "逆トレンデレンブルグ位",
-            "くうしゃ": "空車", "くっきょく": "屈曲", "くもん": "肛門",
-            "くらっしゅしょうこうぐん": "クラッシュ症候群", "くんしょう": "燻焼",
-            "けいかい": "警戒", "けいかんえいよう": "経管栄養",
-            "けいこうえあうえい": "経口エアウェイ", "けいけつ": "喀血",
-            "けいびえあうえい": "経鼻エアウェイ", "けいれん": "痙攣",
-            "けいしょう": "警鐘", "けいつい": "頸椎", "けっさつ": "結紮",
-            "けっとうそくてい": "血糖測定", "けっとうち": "血糖値", "けつえき": "血液",
-            "けつまくそうはく": "結膜蒼白", "けんいん": "牽引", "けんさく": "検索",
-            "げけつ": "下血", "げんかく": "現確", "げんちゃく": "現着",
-            "げんぱしきしすてむ": "現場指揮システム(ICS)", "こうあつさんそ": "高圧酸素",
-            "こうくうきかさい": "航空機火災", "こうくうたい": "航空隊",
-            "こうほうよし": "後方よし", "こうもん": "肛門", "こうとう": "喉頭",
-            "こうとうきょう": "喉頭鏡", "こうとうぶ": "後頭部",
-            "こーるどぞーん": "コールドゾーン", "こてい": "固定",
-            "こていてーぷ": "固定テープ", "こっせつ": "骨折", "こつばん": "骨盤",
-            "さーじかるますく": "サージカルマスク", "さいれん": "サイレン",
-            "さっそう": "擦創", "さふすとれっちゃー": "サブストレッチャー",
-            "さむすぷりんと": "サムスプリント", "さそくよし": "左側よし",
-            "さあ": "くも膜下出血", "しーあーるてぃー": "CRT",
-            "しーからー": "ネックカラー", "しーぱ": "心肺停止",
-            "しーぱおわ": "到着時心肺停止", "しーぶいでぃー": "脳血管障害",
-            "しきいかん": "指揮官", "しきほんぶ": "指揮本部", "しけったい": "止血帯",
-            "しし": "四肢", "ししゅう": "周囲状況", "しぜん": "除染",
-            "しそ": "自訴", "しそう": "刺創", "しっきん": "失禁",
-            "してん": "死斑", "しつむ": "執務", "しでんず": "心電図",
-            "しにゅう": "進入", "しぼう": "自己死", "しびれ": "痺れ",
-            "しゃりょう": "車両", "しゃりょうかさい": "車両火災",
-            "しゅうよう": "収容", "しゅっどう": "出動", "しゅそ": "主訴",
-            "しゅどう": "手動", "しょうか": "消火", "しょうちょう": "小腸",
-            "しょうめんしょうとつ": "正面衝突", "しょくいん": "消防職員",
-            "しょくどう": "食道", "しようずみきざい": "使用済み機材",
-            "しんぞう": "心臓", "しんしつさい動": "心室細動",
-            "しんしつひんみゃく": "心室頻脈", "しんしんそうしつ": "心神喪失",
-            "しんたんぽ": "心タンポナーデ", "しんていし": "心停止",
-            "しんてん": "伸展", "しんどう": "車両振動", "しんふぜん": "心不全",
-            "しんぼうさいどう": "心房細動", "じえん": "支援", "じえんたい": "支援隊",
-            "じーしーえーす": "GCS", "じこし": "自己死", "じそ": "自訴",
-            "じそん": "自損", "じぞくかんし": "持続監視", "じどう": "自動",
-            "じゃーる": "J", "じゅーる": "J", "じゅうたい": "渋滞",
-            "じゅうにしちょう": "十二指腸", "じゅうねん": "充電", "じょさいどう": "除細動",
-            "じょさいどうき": "除細動器", "じょさいどうぱっど": "除細動パッド",
-            "じょせん": "除染", "じょみゃく": "徐脈", "じょうし": "上肢",
-            "じょうしゃ": "乗車", "じょうたい": "上腿", "じょうほうこうしん": "情報更新",
-            "じょうみゃく": "静脈", "じょうみゃくろかくほ": "静脈路確保",
-            "じょうぱく": "上腕", "じょうわん": "上腕", "すいげん": "水源",
-            "すいなん": "水難", "すいなんきゅうじょたい": "水難救助隊",
-            "すいぞう": "膵臓", "すくーぷすとれっちゃー": "スクープストレッチャー",
-            "すたいれっと": "スタイレット", "すとれっちゃー": "ストレッチャー",
-            "すとれーとがたきかんきょう": "ストレート型気管鏡",
-            "すてあけーす": "階段担架", "すていあんどぷれい": "ステイアンドプレイ",
-            "すーぱーあんびゅらんす": "大規模災害救急車",
-            "せいしょ": "生理食塩水", "せいそう": "清掃", "せいび": "整備",
-            "せいもん": "声門", "せいもんじょうでばいす": "声門上デバイス",
-            "せきしょくとう": "赤色灯", "せっそう": "切創", "せつぞく": "接続",
-            "せんけつ": "鮮血", "せんてい": "選定", "せんぴょうせいこきゅう": "浅表性呼吸",
-            "せんぱくかさい": "船舶火災", "ぜんかいじょ": "全介助", "ぜんそく": "喘息",
-            "ぜんとうぶ": "前頭部", "ぜんぱく": "前腕", "ぜんぱくよし": "前方よし",
-            "ぜんぽうよし": "前方よし", "ぜんしょう": "全焼",
-            "ぜっこんちんか": "舌根沈下", "ぜんめい": "喘鳴", "ぞーにんぐ": "ゾーニング",
-            "たいえき": "体液", "たいかん": "体幹", "たいかんこてい": "体幹固定",
-            "たいこうはんしゃ": "対光反射", "たいどう": "体動",
-            "たいりょうしょうびょうしゃ": "大量傷病者", "たいりゅう": "対流",
-            "たいいん": "救急隊員", "たいちょう": "救急隊長", "たそ": "他訴",
-            "たはつがいしょう": "多発外傷", "たてものかさい": "建物火災",
-            "たん": "痰", "だいたいこつ": "大腿骨", "だっすい": "脱水",
-            "だっきゅう": "脱臼", "だぼく": "打撲", "ちあ": "チアノーゼ",
-            "ちんあつ": "鎮圧", "ちんか": "鎮火", "ちゅうにゅう": "注入",
-            "ちゅうどく": "中毒", "ちょきん": "直近", "ちょっきん": "直近",
-            "ちょくちょう": "直腸", "ちょうしんき": "聴診器",
-            "ついたつ": "追突", "つうしんいん": "通信員",
-            "ていけっとう": "低血糖", "ていせき": "車両渋滞", "ていたいおん": "低体温症",
-            "ていし": "緊急停止", "てぶくろ": "手袋", "てんいん": "転院搬送",
-            "てんかんほっさ": "てんかん発作", "てんけん": "点検", "てんじょうよし": "天井よし",
-            "てんとう": "転倒", "てんてき": "点滴", "てんらく": "転落",
-            "でぃーまっと": "DMAT", "でぃーぱっと": "DPAT",
-            "どうこう": "瞳孔", "どうみゃく": "動脈", "どくかー": "ドクターカー",
-            "どくへり": "ドクターヘリ", "どこへり": "ドクターヘリ", "どっぽ": "独歩",
-            "といぜん": "筒先", "とうかい": "倒壊", "とけつ": "吐血",
-            "とくていこうい": "特定行為", "とくめい": "特命", "とりあーじ": "トリアージ",
-            "とりあーじたっぐ": "トリアージタッグ",
-            "ないふく": "内服", "にょうかてーてる": "尿カテ", "ぬのたんか": "布担架",
-            "ねぶらいざー": "ネブライザー", "ねんざ": "捻挫", "ねっしょう": "熱傷",
-            "ねっちゅうしょう": "熱中症", "のうこうそく": "脳梗塞", "のうしゅっけつ": "脳出血",
-            "はいえん": "肺炎/排煙", "はいがい": "背臥位", "はいぶつう": "背部痛",
-            "はいぱーれすきゅー": "消防救助機動部隊", "はかい": "破壊", "はしごたい": "はしご隊",
-            "はつでんき": "発電機", "はなかにゅーら": "鼻カニューラ", "はりすてぼっくす": "針捨てボックス",
-            "はんしゃ": "反射", "はんしょう": "半焼", "ばいおはざーど": "バイオハザード",
-            "ばっぐばるぶますく": "BVM", "ばっくどらふと": "バックドラフト", "ばっくぼーど": "バックボード",
-            "ばんそうこう": "絆創膏", "ぱっと": "PAT法", "ひかしゅっけつ": "皮下出血",
-            "ひきあげ": "引揚", "ひきつぎ": "引継ぎ", "ひぞう": "脾臓",
-            "ひんみゃく": "頻脈", "ひもと": "火元", "ひえん": "飛炎",
-            "びーぴー": "BP", "びーてぃー": "BT", "びしゅっけつ": "鼻出血",
-            "びょうたい": "病態", "ぴーぴーいー": "PPE",
-            "ぴーあーる": "PR", "ぴーは": "P波",
-            "ふおん": "不穏", "ふくがい": "腹臥位", "ふくしゃ": "輻射",
-            "ふくしゃねつ": "輻射熱", "ふくすい": "腹水", "ふずいいてき": "不随意的",
-            "ふはんそう": "不搬送", "ふへん": "状態不変", "ふけい": "浮腫",
-            "ふらっしゅおーばー": "フラッシュオーバー", "ふんしゅつせいしゅっけつ": "噴出性出血",
-            "ふぇいすしーるど": "フェイスシールド", "ぶーいむ": "BVM",
-            "ぷれあらいばる": "プレアライバル", "ぺんらいと": "ペンライト",
-            "ほうたい": "包帯", "ほうすい": "放水", "ほうねつ": "放熱",
-            "ほおん": "保温", "ほきき": "補聴器", "ほじょいん": "補助員",
-            "ほっとぞーん": "ホットゾーン", "ほっとらいん": "ホットライン",
-            "ぼうごえぷろん": "防護エプロン", "ぼうごごーぐる": "防護ゴーグル",
-            "ぼうこう": "膀胱", "ぼるてーじ": "電圧",
-            "まき": "麻痺", "まきん": "マッキントッシュ型", "まっきんとっしゅがた": "マッキントッシュ型",
-            "まっしょう": "満床", "まひ": "麻痺", "まんしぇっと": "マンシェット",
-            "まんしょう": "満床", "みどりたぐ": "軽症(緑)", "むみゃくせい": "無脈性電気活動",
-            "めいんすとれっちゃー": "メインストレッチャー", "めいりょう": "明瞭",
-            "めがね": "眼鏡", "めまい": "眩暈", "めでぃかるこんとろーる": "メディカルコントロール",
-            "めんたい": "面体", "もうふ": "毛布", "もにたーかんさつ": "モニター観察",
-            "やくざいちゅうにゅう": "薬剤注入", "ゆえき": "輸液", "ゆそう": "患者輸送",
-            "ゆたんぽ": "湯たんぽ", "ようつい": "腰椎", "よし": "指差喚呼",
-            "らりんじあるますく": "LMA", "らくか": "落下", "りざーばーますく": "リザーバーマスク",
-            "りさい": "罹災", "りだん": "離断", "りゃくしょう": "略焼",
-            "りゅうぜん": "流涎", "りょうかい": "了解", "りんやかさい": "林野火災",
-            "るーかす": "LUCAS", "るーと": "静脈路", "るーとこてい": "ルート固定",
-            "れいかん": "冷汗", "れきしゃ": "轢過", "れっそう": "裂創",
-            "ろーどあんどごー": "ロードアンドゴー", "ろすく": "自己心拍再開"
-        };
+    const summaryPanel = document.getElementById('panel-summary');
+    const transcriptPanel = document.getElementById('panel-transcript');
+    const mainBtn = document.getElementById('main-btn');
 
-        const AUTO_CORRECT_MAP = {
-            "相川": "総曲輪", "早川": "総曲輪", "府中": "婦中町", "八百": "八尾町", "五服": "五福"
-        };
+    // タブ切り替え
+    function switchTab(type) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        
+        document.getElementById(`tab-${type}`).classList.add('active');
+        document.getElementById(`panel-${type}`).classList.add('active');
+    }
 
-        let recognition, mediaRecorder, audioChunks = [];
-        let silenceTimer = null;
-        let finalTranscript = ""; 
-        let isNewLine = true;
+    // 設定モーダル制御
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const apiKeyInput = document.getElementById('api-key-input');
+    
+    apiKeyInput.value = localStorage.getItem('gemini_api_key') || "";
+    settingsBtn.onclick = () => settingsModal.style.display = 'flex';
+    document.getElementById('save-settings').onclick = () => {
+        localStorage.setItem('gemini_api_key', apiKeyInput.value);
+        settingsModal.style.display = 'none';
+    };
 
-        const resultArea = document.getElementById('result-area');
-        const mainBtn = document.getElementById('main-btn');
-
-        function getFileTimestamp() {
-            const now = new Date();
-            const y = now.getFullYear();
-            const m = String(now.getMonth() + 1).padStart(2, '0');
-            const d = String(now.getDate()).padStart(2, '0');
-            const hh = String(now.getHours()).padStart(2, '0');
-            const mm = String(now.getMinutes()).padStart(2, '0');
-            const ss = String(now.getSeconds()).padStart(2, '0');
-            return `${y}${m}${d}_${hh}${mm}${ss}`;
+    // 音声認識
+    mainBtn.onclick = () => {
+        if (recognition && mainBtn.classList.contains('active')) {
+            recognition.stop();
+            mainBtn.classList.remove('active');
+            clearTimeout(silenceTimer);
+            return;
         }
 
-        function forceToyamaCorrect(text) {
-            if (!text) return text;
-            let corrected = text;
-            for (const [wrong, right] of Object.entries(AUTO_CORRECT_MAP)) {
-                corrected = corrected.replace(new RegExp(wrong, 'g'), right);
-            }
-            const sortedKeys = Object.keys(TOYAMA_FORCE_DICT).sort((a, b) => b.length - a.length);
-            for (const key of sortedKeys) {
-                corrected = corrected.replace(new RegExp(key, 'g'), TOYAMA_FORCE_DICT[key]);
-            }
-            return corrected;
+        try {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'ja-JP'; recognition.continuous = true; recognition.interimResults = true;
+            
+            recognition.onresult = (e) => {
+                let interim = "";
+                for (let i = e.resultIndex; i < e.results.length; ++i) {
+                    let text = e.results[i][0].transcript;
+                    if (e.results[i].isFinal) {
+                        if (isNewLine) { finalTranscript += new Date().toLocaleTimeString() + " "; isNewLine = false; }
+                        finalTranscript += text;
+                        clearTimeout(silenceTimer);
+                        silenceTimer = setTimeout(() => { finalTranscript += "\n"; isNewLine = true; }, 5000);
+                    } else { interim = text; }
+                }
+                transcriptPanel.innerText = finalTranscript + interim;
+                transcriptPanel.scrollTop = transcriptPanel.scrollHeight;
+            };
+            recognition.start();
+            mainBtn.classList.add('active');
+            switchTab('transcript');
+        } catch (e) { alert("マイクが使用できません"); }
+    };
+
+    // Gemini API連携
+    document.getElementById('ai-btn').onclick = async () => {
+        const key = localStorage.getItem('gemini_api_key');
+        if (!key) { alert("⚙️ボタンからAPIキーを設定してください"); return; }
+        if (!finalTranscript) { alert("文字起こしデータがありません"); return; }
+
+        summaryPanel.innerText = "✨ AIが要約中...";
+        switchTab('summary');
+
+        const prompt = `あなたは富山消防のベテラン救急隊員です。以下の現場メモを読み取り、医療報告書として構造化して整理してください。
+出力項目：【現着】【傷病者情報】【主訴・所見】【バイタル】【経過・処置】
+メモ：\n${finalTranscript}`;
+
+        try {
+            const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            const data = await resp.json();
+            const result = data.candidates[0].content.parts[0].text;
+            summaryPanel.innerText = result;
+        } catch (e) {
+            summaryPanel.innerText = "エラーが発生しました。APIキーを確認してください。";
         }
+    };
 
-        function getTimestamp() {
-            const now = new Date();
-            return `${now.getHours()}時${now.getMinutes()}分${now.getSeconds()}秒 `;
+    document.getElementById('save-txt-btn').onclick = () => {
+        const blob = new Blob([summaryPanel.innerText + "\n\n---元データ---\n" + finalTranscript], {type: 'text/plain'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `REQ_report_${new Date().getTime()}.txt`;
+        a.click();
+    };
+
+    document.getElementById('clear-btn').onclick = () => {
+        if(confirm("データをすべて消去しますか？")) {
+            finalTranscript = "";
+            transcriptPanel.innerText = "";
+            summaryPanel.innerText = "AI要約ボタンを押すと、ここに整形された報告書が表示されます。";
+            isNewLine = true;
         }
-
-        mainBtn.onclick = async () => {
-            if (mediaRecorder && mediaRecorder.state === "recording") {
-                mediaRecorder.stop(); if (recognition) recognition.stop();
-                clearTimeout(silenceTimer); mainBtn.classList.remove('active');
-            } else {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    audioChunks = [];
-                    const mimeType = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm';
-                    mediaRecorder = new MediaRecorder(stream, { mimeType });
-                    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
-                    mediaRecorder.start();
-
-                    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-                    recognition.lang = 'ja-JP'; recognition.continuous = true; recognition.interimResults = true;
-
-                    recognition.onresult = (e) => {
-                        let interim = ""; let hasNewFinal = false;
-                        for (let i = e.resultIndex; i < e.results.length; ++i) {
-                            let transcript = forceToyamaCorrect(e.results[i][0].transcript);
-                            if (e.results[i].isFinal) {
-                                if (isNewLine) { finalTranscript += getTimestamp(); isNewLine = false; }
-                                finalTranscript += transcript; hasNewFinal = true;
-                            } else { interim += transcript; }
-                        }
-                        if (hasNewFinal) {
-                            clearTimeout(silenceTimer);
-                            silenceTimer = setTimeout(() => {
-                                if (finalTranscript !== "" && !finalTranscript.endsWith('\n')) {
-                                    finalTranscript += '\n'; resultArea.innerText = finalTranscript; isNewLine = true;
-                                }
-                            }, 5000);
-                        }
-                        resultArea.innerText = finalTranscript + (isNewLine && interim ? getTimestamp() : "") + interim;
-                        resultArea.scrollTop = resultArea.scrollHeight;
-                    };
-                    recognition.start(); mainBtn.classList.add('active'); isNewLine = true;
-                } catch (err) { alert("マイク使用を許可してください"); }
-            }
-        };
-
-        document.getElementById('save-audio-btn').onclick = () => {
-            if (audioChunks.length === 0) return alert("データがありません");
-            const blob = new Blob(audioChunks, {type: 'audio/mp4'});
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-            a.download = `REQ_audio_${getFileTimestamp()}.m4a`; a.click();
-        };
-
-        document.getElementById('save-txt-btn').onclick = () => {
-            const text = resultArea.innerText;
-            if (!text) return alert("テキストがありません");
-            const blob = new Blob([text], {type: 'text/plain'});
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-            a.download = `REQ_log_${getFileTimestamp()}.txt`; a.click();
-        };
-
-        document.getElementById('clear-btn').onclick = () => {
-            if(confirm("すべて消去しますか？")) { 
-                resultArea.innerText = ''; finalTranscript = ''; audioChunks = []; isNewLine = true;
-                clearTimeout(silenceTimer);
-            }
-        };
-    </script>
+    };
+</script>
 </body>
 </html>
