@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="apple-touch-icon" href="icon.png">
-    <title>REQ v2.4.0 (富山消防・救急記録サポーター)</title>
+    <title>REQ v2.4.1 (富山消防・救急記録サポーター)</title>
     <style>
         :root {
             --bg-color: #ffffff;
@@ -227,7 +227,7 @@
     </div>
 
     <div class="container">
-        <h1 id="header-title">REQ v2.4.0</h1>
+        <h1 id="header-title">REQ v2.4.1</h1>
         <div id="result-area"></div>
         <div class="controls">
             <button id="main-btn"></button>
@@ -561,15 +561,34 @@
             a.download = `REQ_log_${getFileTimestamp()}.txt`; a.click();
         };
 
+        const GEMINI_PROMPT = `以下は、富山市消防局の救急隊が現場活動中に発した会話の音声文字起こしデータです。音声認識による誤変換・聞き取り不明瞭な箇所が含まれています。救急医療・消防の専門知識をもとに、下記の指示に従って整理・補正してください。
+
+【整理の指示】
+1. **誤変換の補正**：文脈から救急・消防用語や富山の地名として明らかに誤認識されている部分を適切に修正すること。
+2. **時系列の整理**：「〇時〇分〇秒」の時刻ラベルを基準に、活動内容を時系列順に並べること。
+3. **活動記録のまとめ**：以下の項目を可能な範囲で抽出・構造化すること。
+   - 覚知・出動時刻
+   - 現場到着時刻
+   - 傷病者の主訴・バイタルサイン・観察所見
+   - 実施した処置の内容と時刻
+   - 医療機関への選定・搬送時刻・搬送先病院名
+   - 病院到着時刻・引き継ぎ内容（記録があれば）
+4. **不明箇所の明示**：文脈から補正が困難な箇所は【不明：〇〇】と記載すること。
+5. **出力形式**：整理後の活動記録を読みやすい箇条書き・表形式でまとめること。
+
+【音声文字起こしデータ】
+`;
+
         document.getElementById('gemini-btn').onclick = async () => {
             const text = resultArea.innerText;
             if (!text.trim()) return alert("テキストがありません");
+            const fullText = GEMINI_PROMPT + text;
             try {
-                await navigator.clipboard.writeText(text);
+                await navigator.clipboard.writeText(fullText);
             } catch (e) {
                 // フォールバック
                 const ta = document.createElement('textarea');
-                ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                ta.value = fullText; ta.style.position = 'fixed'; ta.style.opacity = '0';
                 document.body.appendChild(ta); ta.select();
                 document.execCommand('copy');
                 document.body.removeChild(ta);
