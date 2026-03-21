@@ -1,47 +1,55 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="apple-touch-icon" href="icon.png">
-    <title>REQ v2.3.3 (富山消防・救急記録サポーター)</title>
+    <title>REQ v2.4.0 (富山消防・救急記録サポーター)</title>
     <style>
-        :root { 
-            --bg-color: #ffffff; 
-            --text-color: #1e293b; 
-            --accent-color: #ef4444; 
-            --border-color: #e2e8f0; 
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #1e293b;
+            --accent-color: #ef4444;
+            --border-color: #e2e8f0;
         }
-        body { 
-            font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; 
-            background-color: var(--bg-color); 
-            color: var(--text-color); 
-            margin: 0; 
-            padding: 16px; 
-            height: 100dvh; 
-            display: flex; 
-            flex-direction: column; 
+
+        body {
+            font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 16px;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
             box-sizing: border-box;
             overflow: hidden;
             touch-action: manipulation;
         }
+
         #overlay {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 1000;
         }
+
         #guide-box {
             background: white;
             width: 85%;
             max-width: 400px;
             padding: 24px;
             border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
         }
+
         #guide-box h2 {
             margin-top: 0;
             font-size: 1.2rem;
@@ -49,13 +57,18 @@
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 10px;
         }
+
         #guide-box ul {
             padding-left: 20px;
             font-size: 0.85rem;
             line-height: 1.6;
             margin: 15px 0;
         }
-        #guide-box li { margin-bottom: 8px; }
+
+        #guide-box li {
+            margin-bottom: 8px;
+        }
+
         #close-guide {
             width: 100%;
             padding: 14px;
@@ -68,16 +81,17 @@
             cursor: pointer;
         }
 
-        .container { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 20px; 
-            max-width: 500px; 
-            margin: 0 auto; 
-            width: 100%; 
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
             height: 100%;
         }
+
         #header-title {
             text-align: center;
             font-weight: 800;
@@ -85,64 +99,72 @@
             margin: 0;
             color: var(--accent-color);
         }
-        #result-area { 
-            flex: 0 1 60%; 
-            border: 2px solid var(--border-color); 
-            border-radius: 20px; 
-            padding: 15px; 
-            overflow-y: auto; 
-            white-space: pre-wrap; 
-            font-size: 0.9rem; 
+
+        #result-area {
+            flex: 0 1 60%;
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            padding: 15px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 0.9rem;
             line-height: 1.6;
             background: #fafafa;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
         }
+
         .controls {
             display: flex;
             flex-direction: column;
             gap: 15px;
             padding-bottom: 10px;
         }
-        #main-btn { 
-            width: 70px; 
-            height: 70px; 
-            border-radius: 50%; 
-            background: var(--accent-color); 
-            border: none; 
-            cursor: pointer; 
-            align-self: center; 
+
+        #main-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            border: none;
+            cursor: pointer;
+            align-self: center;
             transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
             box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5);
             flex-shrink: 0;
         }
-        #main-btn.active { 
-            border-radius: 12px; 
-            transform: scale(0.85); 
+
+        #main-btn.active {
+            border-radius: 12px;
+            transform: scale(0.85);
             background: #b91c1c;
         }
-        .action-row { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 12px; 
+
+        .action-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
         }
-        .sec-btn { 
-            background: #f1f5f9; 
-            border: none; 
-            padding: 12px; 
-            border-radius: 12px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 0.9rem; 
+
+        .sec-btn {
+            background: #f1f5f9;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
         }
-        #clear-btn { 
+
+        #clear-btn {
             background: #fee2e2;
             color: #b91c1c;
             padding: 12px;
         }
+
         #gemini-btn {
             background: linear-gradient(135deg, #1a73e8, #4285f4);
             color: white;
@@ -159,10 +181,12 @@
             box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
             transition: transform 0.15s, box-shadow 0.15s;
         }
+
         #gemini-btn:active {
             transform: scale(0.97);
             box-shadow: 0 2px 6px rgba(66, 133, 244, 0.3);
         }
+
         #toast {
             position: fixed;
             bottom: 30px;
@@ -180,12 +204,14 @@
             z-index: 9999;
             white-space: nowrap;
         }
+
         #toast.show {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
     </style>
 </head>
+
 <body>
     <div id="overlay">
         <div id="guide-box">
@@ -201,7 +227,7 @@
     </div>
 
     <div class="container">
-        <h1 id="header-title">REQ v2.3.3</h1>
+        <h1 id="header-title">REQ v2.4.0</h1>
         <div id="result-area"></div>
         <div class="controls">
             <button id="main-btn"></button>
@@ -233,11 +259,11 @@
             "しんぼ": "新保", "あkiよし": "秋吉", "おおた": "太田", "はすまち": "蓮町", "こうよう": "光陽",
             "ふたく口": "二口", "たばたけ": "田畠", "にしのみや": "西宮", "おくだ": "奥田", "とよタ": "豊田",
             "ちゅうおうびょういん": "県立中央病院", "しみんびょういん": "富山市民病院", "せきじゅうじ": "富山赤十字病院",
-            "とみだい": "富山大学附属病院", "さいせいかい": "済生会富山病院", 
-            "とやまろうさい": "富山労災病院", "かみいちびょういん": "上市総合病院", "なめりかわ": "滑川病院", 
-            "やつおそうごうびょういん": "八尾総合病院", "まちなか": "まちなか病院", 
-            "とやまりはびり": "富山リハビリテーションセンター", "とやまえき": "富山駅", "ふぁぼーれ": "ファボーレ", 
-            "おーばーど": "オーバード・ホール", "しやくしょ": "富山市役所", "あぴた": "アピタ", "いおん": "イオン", 
+            "とみだい": "富山大学附属病院", "さいせいかい": "済生会富山病院",
+            "とやまろうさい": "富山労災病院", "かみいちびょういん": "上市総合病院", "なめりかわ": "滑川病院",
+            "やつおそうごうびょういん": "八尾総合病院", "まちなか": "まちなか病院",
+            "とやまりはびり": "富山リハビリテーションセンター", "とやまえき": "富山駅", "ふぁぼーれ": "ファボーレ",
+            "おーばーど": "オーバード・ホール", "しやくしょ": "富山市役所", "あぴた": "アピタ", "いおん": "イオン",
             "ぐらんどぷらざ": "グランドプラザ", "とやまくうこう": "富山空港", "しっく": "CIC",
             "あーぶい": "指揮車", "あーるしーえー": "心拍再開", "あいしーゆー": "集中治療室",
             "あおたぐ": "軽症(緑)", "あかたぐ": "重症(赤)", "あくとぱるす": "AutoPulse",
@@ -400,7 +426,7 @@
 
         let recognition, mediaRecorder, audioChunks = [];
         let silenceTimer = null;
-        let finalTranscript = ""; 
+        let finalTranscript = "";
         let isNewLine = true;
         let activeStream = null;
 
@@ -447,12 +473,12 @@
         async function startRecording() {
             try {
                 // Bluetoothマイク優先のための制約設定
-                const constraints = { 
-                    audio: { 
+                const constraints = {
+                    audio: {
                         echoCancellation: true,
                         noiseSuppression: true,
                         autoGainControl: true
-                    } 
+                    }
                 };
                 activeStream = await navigator.mediaDevices.getUserMedia(constraints);
                 audioChunks = [];
@@ -487,11 +513,11 @@
                 };
 
                 recognition.onerror = (e) => console.error("Speech Error:", e.error);
-                recognition.start(); 
-                mainBtn.classList.add('active'); 
+                recognition.start();
+                mainBtn.classList.add('active');
                 isNewLine = true;
-            } catch (err) { 
-                alert("マイクの取得に失敗しました。Bluetoothの接続を確認してください。"); 
+            } catch (err) {
+                alert("マイクの取得に失敗しました。Bluetoothの接続を確認してください。");
                 console.error(err);
             }
         }
@@ -520,17 +546,17 @@
 
         function downloadAudio() {
             if (audioChunks.length === 0) return alert("保存する音声データがありません。録音を一度完了させてください。");
-            const blob = new Blob(audioChunks, {type: 'audio/mp4'});
-            const a = document.createElement('a'); 
+            const blob = new Blob(audioChunks, { type: 'audio/mp4' });
+            const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `REQ_audio_${getFileTimestamp()}.m4a`; 
+            a.download = `REQ_audio_${getFileTimestamp()}.m4a`;
             a.click();
         }
 
         document.getElementById('save-txt-btn').onclick = () => {
             const text = resultArea.innerText;
             if (!text) return alert("テキストがありません");
-            const blob = new Blob([text], {type: 'text/plain'});
+            const blob = new Blob([text], { type: 'text/plain' });
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
             a.download = `REQ_log_${getFileTimestamp()}.txt`; a.click();
         };
@@ -555,11 +581,12 @@
         };
 
         document.getElementById('clear-btn').onclick = () => {
-            if(confirm("すべて消去しますか？")) { 
+            if (confirm("すべて消去しますか？")) {
                 resultArea.innerText = ''; finalTranscript = ''; audioChunks = []; isNewLine = true;
                 clearTimeout(silenceTimer);
             }
         };
     </script>
 </body>
+
 </html>
