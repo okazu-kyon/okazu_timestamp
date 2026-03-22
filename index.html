@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="apple-touch-icon" href="icon.png">
-    <title>REQ v2.4.1 (富山消防・救急記録サポーター)</title>
+    <title>REQ v2.4.2 (富山消防・救急記録サポーター)</title>
     <style>
         :root {
             --bg-color: #ffffff;
@@ -227,7 +227,7 @@
     </div>
 
     <div class="container">
-        <h1 id="header-title">REQ v2.4.1</h1>
+        <h1 id="header-title">REQ v2.4.2</h1>
         <div id="result-area"></div>
         <div class="controls">
             <button id="main-btn"></button>
@@ -579,10 +579,46 @@
 【音声文字起こしデータ】
 `;
 
+        /**
+         * 個人情報マスキング処理
+         * Geminiに送信する前に、氏名・生年月日・住所・電話番号等を伏字に変換する
+         */
+        function maskPersonalInfo(text) {
+            let masked = text;
+
+            // ── 電話番号 ──────────────────────────────────────────
+            // 例: 090-1234-5678 / 0120-000-000 / (076)123-4567 / 0764321234
+            masked = masked.replace(/(\(?\d{2,4}\)?[-・\s]?\d{2,4}[-・\s]?\d{3,4})/g, '[電話番号]');
+
+            // ── 生年月日（元号・西暦） ────────────────────────────
+            // 例: 昭和45年3月12日 / 平成2年10月1日 / 令和3年5月5日 / 1990年4月1日
+            masked = masked.replace(/(昭和|平成|令和|大正|明治)\s*\d{1,2}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日/g, '[生年月日]');
+            masked = masked.replace(/\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日生(まれ)?/g, '[生年月日]');
+            masked = masked.replace(/生年月日\s*[:：]?\s*[\d年月日昭和平成令和大正明治\s]+/g, '生年月日：[生年月日]');
+
+            // ── 住所 ─────────────────────────────────────────────
+            // 例: 富山市総曲輪3丁目1番2号 / ○○番地 / ○○号室
+            masked = masked.replace(/[\u4e00-\u9faf\u30a0-\u30ff]+[市区町村郡]\s*[\u4e00-\u9faf\u30a0-\u30ff\d]+\s*\d+\s*(丁目|番地?|号(室)?)/g, '[住所]');
+            masked = masked.replace(/\d+\s*番地\s*\d*(号)?/g, '[住所(番地)]');
+
+            // ── 郵便番号 ──────────────────────────────────────────
+            masked = masked.replace(/〒?\s*\d{3}[-ー]\d{4}/g, '[郵便番号]');
+
+            // ── 氏名（「さん」「様」「氏」「くん」「ちゃん」が後続する人名） ──
+            // 例: 山田太郎さん / 田中花子様 / 佐藤一郎氏
+            masked = masked.replace(/[\u4e00-\u9faf]{1,4}[\u4e00-\u9faf\u30a0-\u30ff]{1,4}\s*(さん|様|氏|くん|ちゃん|殿)/g, '[氏名]$1');
+
+            // 「患者名」「氏名」「名前」「お名前」ラベルに続く氏名
+            masked = masked.replace(/(患者名?|氏名|名前|お名前)\s*[:：]?\s*[\u4e00-\u9faf\u30a0-\u30ff\s]{2,10}/g, '$1：[氏名]');
+
+            return masked;
+        }
+
         document.getElementById('gemini-btn').onclick = async () => {
             const text = resultArea.innerText;
             if (!text.trim()) return alert("テキストがありません");
-            const fullText = GEMINI_PROMPT + text;
+            const maskedText = maskPersonalInfo(text);
+            const fullText = GEMINI_PROMPT + maskedText;
             try {
                 await navigator.clipboard.writeText(fullText);
             } catch (e) {
