@@ -427,12 +427,25 @@
 
         let recognition, mediaRecorder, audioChunks = [];
         let silenceTimer = null;
-        let finalTranscript = "";
+        let finalTranscript = localStorage.getItem('req_backup_text') || "";
         let isNewLine = true;
         let activeStream = null;
 
         const resultArea = document.getElementById('result-area');
         const mainBtn = document.getElementById('main-btn');
+
+        // ページ読み込み時にバックアップがあれば自動で復元
+        if (finalTranscript) {
+            resultArea.innerText = finalTranscript;
+        }
+
+        // 録音中の誤操作による再読み込みやタブ閉鎖を防ぐための警告
+        window.addEventListener('beforeunload', (e) => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
 
         function getFileTimestamp() {
             const now = new Date();
@@ -506,10 +519,12 @@
                         silenceTimer = setTimeout(() => {
                             if (finalTranscript !== "" && !finalTranscript.endsWith('\n')) {
                                 finalTranscript += '\n'; resultArea.innerText = finalTranscript; isNewLine = true;
+                                localStorage.setItem('req_backup_text', finalTranscript);
                             }
                         }, 5000);
                     }
                     resultArea.innerText = finalTranscript + (isNewLine && interim ? getTimestamp() : "") + interim;
+                    localStorage.setItem('req_backup_text', resultArea.innerText); // 1文字ごとにバックアップ保存
                     resultArea.scrollTop = resultArea.scrollHeight;
                 };
 
@@ -644,6 +659,7 @@
         document.getElementById('clear-btn').onclick = () => {
             if (confirm("すべて消去しますか？")) {
                 resultArea.innerText = ''; finalTranscript = ''; audioChunks = []; isNewLine = true;
+                localStorage.removeItem('req_backup_text'); // すべて消去時にバックアップも削除
                 clearTimeout(silenceTimer);
             }
         };
