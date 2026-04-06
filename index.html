@@ -5,13 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="apple-touch-icon" href="icon.png">
-    <title>REQ v2.5 (富山消防・救急記録サポーター)</title>
+    <title>QQ Recorder REQ v2.5</title>
     <style>
         :root {
-            --bg-color: #ffffff;
-            --text-color: #1e293b;
-            --accent-color: #ef4444;
-            --border-color: #e2e8f0;
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --accent-color: #f87171;
+            --border-color: #334155;
+            --surface-color: #1e293b;
         }
 
         body {
@@ -42,12 +43,13 @@
         }
 
         #guide-box {
-            background: white;
+            background: var(--surface-color);
             width: 85%;
             max-width: 400px;
             padding: 24px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
         }
 
         #guide-box h2 {
@@ -92,12 +94,25 @@
             height: 100%;
         }
 
-        #header-title {
+        .header-section {
             text-align: center;
+            margin-bottom: 5px;
+        }
+
+        #header-title {
             font-weight: 800;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             margin: 0;
             color: var(--accent-color);
+            letter-spacing: -0.02em;
+        }
+
+        #version-tag {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-top: -2px;
+            opacity: 0.8;
         }
 
         #result-area {
@@ -107,10 +122,11 @@
             padding: 15px;
             overflow-y: auto;
             white-space: pre-wrap;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             line-height: 1.6;
-            background: #fafafa;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+            background: var(--surface-color);
+            color: var(--text-color);
+            box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
         .controls {
@@ -146,8 +162,9 @@
         }
 
         .sec-btn {
-            background: #f1f5f9;
-            border: none;
+            background: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
             padding: 12px;
             border-radius: 12px;
             cursor: pointer;
@@ -157,12 +174,18 @@
             align-items: center;
             justify-content: center;
             gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .sec-btn:active {
+            transform: scale(0.96);
+            background: var(--border-color);
         }
 
         #clear-btn {
-            background: #fee2e2;
-            color: #b91c1c;
-            padding: 12px;
+            background: #450a0a;
+            color: #fca5a5;
+            border: 1px solid #7f1d1d;
         }
 
         #gemini-btn {
@@ -192,8 +215,8 @@
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%) translateY(20px);
-            background: #1e293b;
-            color: white;
+            background: #f87171;
+            color: #ffffff;
             padding: 12px 24px;
             border-radius: 999px;
             font-size: 0.85rem;
@@ -203,6 +226,7 @@
             pointer-events: none;
             z-index: 9999;
             white-space: nowrap;
+            box-shadow: 0 10px 20px rgba(248, 113, 113, 0.3);
         }
 
         #toast.show {
@@ -215,14 +239,14 @@
 <body>
     <div id="overlay">
         <div id="guide-box">
-            <h2>富山消防・救急記録サポーター REQ</h2>
+            <h2>QQ Recorder REQ</h2>
             <ul>
                 <li><strong>開始:</strong> 中央の赤ボタンで録音開始。再度押すと停止します。</li>
                 <li><strong>自動改行:</strong> 5秒間の沈黙を検知すると時刻を挿入して改行します。</li>
                 <li><strong>⚠️ 録音の注意:</strong>
                     ブラウザのまま使用してください！iPhoneで「ホーム画面に追加」する場合は、必ず<strong>「Webアプリとして開く」の設定を【OFF】に</strong>してください（画面を閉じると録音が止まってしまいます）。
                 </li>
-                <li><strong>✨ Geminiで開く:</strong> テキストをコピーしてGeminiを起動。活動記録を自動で整理・まとめてもらえます。</li>
+                <li><strong>✨ Gemini（AI）で開く:</strong> テキストをコピーしてGeminiを起動。活動記録を自動で整理・まとめてもらえます。</li>
                 <li><strong>🔒 個人情報保護:</strong> Geminiへ送る前に氏名・住所等の個人情報は自動で伏字になりますが、念のためAI送信前にご自身でも目視確認をお願いします。</li>
             </ul>
             <button id="close-guide">了解して使用を開始する</button>
@@ -230,7 +254,10 @@
     </div>
 
     <div class="container">
-        <h1 id="header-title">REQ v2.5</h1>
+        <div class="header-section">
+            <h1 id="header-title">QQ Recorder REQ</h1>
+            <div id="version-tag">v2.5</div>
+        </div>
         <div id="result-area"></div>
         <div class="controls">
             <button id="main-btn"></button>
@@ -238,9 +265,9 @@
                 <button class="sec-btn" id="save-txt-btn">💾 テキスト保存</button>
                 <button class="sec-btn" id="save-audio-btn">🎙️ 音声保存</button>
             </div>
-            <button id="gemini-btn">✨ Geminiで開く（テキストをコピー）</button>
+            <button id="gemini-btn">✨ Gemini（AI）で開く（テキストをコピー）</button>
             <div class="action-row">
-                <button class="sec-btn" id="pc-mode-btn" style="background:#e2e8f0; color:#475569;">💻 PC入力モード: OFF</button>
+                <button class="sec-btn" id="pc-mode-btn" style="background:var(--surface-color); color:var(--text-color);">💻 PC入力モード: OFF</button>
                 <button class="sec-btn" id="clear-btn">🗑️ すべて消去</button>
             </div>
         </div>
@@ -683,12 +710,12 @@
             const btn = document.getElementById('pc-mode-btn');
             if (pcModeEnabled) {
                 // PCモードON
-                btn.style.background = '#bfdbfe';
-                btn.style.color = '#1e3a8a';
+                btn.style.background = '#1e3a8a';
+                btn.style.color = '#ffffff';
                 btn.innerText = '💻 PC入力モード: ON';
                 resultArea.contentEditable = "true";
                 resultArea.style.cursor = "text";
-                resultArea.style.background = "#fff";
+                resultArea.style.background = "#1e293b";
                 resultArea.style.border = "2px solid #3b82f6";
                 lastConfirmedText = resultArea.innerText;
                 resultArea.focus();
@@ -701,12 +728,12 @@
                 mainBtn.style.pointerEvents = "none"; // スマホ録音ボタンを無効化
             } else {
                 // PCモードOFF
-                btn.style.background = '#e2e8f0';
-                btn.style.color = '#475569';
+                btn.style.background = 'var(--surface-color)';
+                btn.style.color = 'var(--text-color)';
                 btn.innerText = '💻 PC入力モード: OFF';
                 resultArea.contentEditable = "false";
                 resultArea.style.cursor = "default";
-                resultArea.style.background = "#fafafa";
+                resultArea.style.background = "var(--surface-color)";
                 resultArea.style.border = "2px solid var(--border-color)";
                 mainBtn.style.opacity = "1";
                 mainBtn.style.pointerEvents = "auto";
