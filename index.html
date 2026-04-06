@@ -136,23 +136,63 @@
             padding-bottom: 10px;
         }
 
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(248, 113, 113, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0); }
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        .rec-indicator {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: var(--accent-color);
+            font-weight: 800;
+            font-size: 0.9rem;
+            margin-bottom: -10px;
+            letter-spacing: 0.1em;
+        }
+
+        .rec-dot {
+            width: 10px;
+            height: 10px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            animation: blink 1s infinite;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+
+        body.recording .rec-indicator {
+            display: flex;
+        }
+
         #main-btn {
-            width: 70px;
-            height: 70px;
+            width: 76px;
+            height: 76px;
             border-radius: 50%;
             background: var(--accent-color);
             border: none;
             cursor: pointer;
             align-self: center;
             transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5);
+            box-shadow: 0 8px 20px rgba(248, 113, 113, 0.4);
             flex-shrink: 0;
+            position: relative;
+            z-index: 10;
         }
 
         #main-btn.active {
-            border-radius: 12px;
-            transform: scale(0.85);
+            border-radius: 16px;
+            transform: scale(0.9);
             background: #b91c1c;
+            animation: pulse-red 2s infinite;
         }
 
         .action-row {
@@ -260,6 +300,10 @@
         </div>
         <div id="result-area"></div>
         <div class="controls">
+            <div class="rec-indicator">
+                <div class="rec-dot"></div>
+                <span>RECORDING</span>
+            </div>
             <button id="main-btn"></button>
             <div class="action-row">
                 <button class="sec-btn" id="save-txt-btn">💾 テキスト保存</button>
@@ -563,6 +607,7 @@
                 recognition.onerror = (e) => console.error("Speech Error:", e.error);
                 recognition.start();
                 mainBtn.classList.add('active');
+                document.body.classList.add('recording');
                 isNewLine = true;
             } catch (err) {
                 alert("マイクの取得に失敗しました。Bluetoothの接続を確認してください。");
@@ -579,6 +624,7 @@
             }
             clearTimeout(silenceTimer);
             mainBtn.classList.remove('active');
+            document.body.classList.remove('recording');
         }
 
         document.getElementById('save-audio-btn').onclick = () => {
