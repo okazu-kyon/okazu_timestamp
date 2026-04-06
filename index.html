@@ -240,7 +240,10 @@
                 <button class="sec-btn" id="save-audio-btn">🎙️ 音声保存</button>
             </div>
             <button id="gemini-btn">✨ Geminiで開く（テキストをコピー）</button>
-            <button class="sec-btn" id="clear-btn">🗑️ すべて消去</button>
+            <div class="action-row">
+                <button class="sec-btn" id="pc-mode-btn" style="background:#e2e8f0; color:#475569;">💻 PC入力モード: OFF</button>
+                <button class="sec-btn" id="clear-btn">🗑️ すべて消去</button>
+            </div>
         </div>
     </div>
     <div id="toast">📋 コピーしました！Geminiに貼り付けてください</div>
@@ -664,8 +667,107 @@
                 resultArea.innerText = ''; finalTranscript = ''; audioChunks = []; isNewLine = true;
                 localStorage.removeItem('req_backup_text'); // すべて消去時にバックアップも削除
                 clearTimeout(silenceTimer);
+
+                // PCモード関連の変数リセット
+                if (typeof pcTimer !== 'undefined') clearTimeout(pcTimer);
+                if (typeof lastConfirmedText !== 'undefined') lastConfirmedText = '';
             }
         };
+
+        // ========== PC入力モード（裏モード）ロジック ==========
+        let pcModeEnabled = false;
+        let pcTimer = null;
+        let lastConfirmedText = finalTranscript; // 既存テキストからスタート
+
+        document.getElementById('pc-mode-btn').onclick = () => {
+            pcModeEnabled = !pcModeEnabled;
+            const btn = document.getElementById('pc-mode-btn');
+            if (pcModeEnabled) {
+                // PCモードON
+                btn.style.background = '#bfdbfe';
+                btn.style.color = '#1e3a8a';
+                btn.innerText = '💻 PC入力モード: ON';
+                resultArea.contentEditable = "true";
+                resultArea.style.cursor = "text";
+                resultArea.style.background = "#fff";
+                resultArea.style.border = "2px solid #3b82f6";
+                lastConfirmedText = resultArea.innerText;
+                resultArea.focus();
+                
+                // 録音中なら停止
+                if (mediaRecorder && mediaRecorder.state === "recording") {
+                    stopRecording();
+                }
+                mainBtn.style.opacity = "0.5";
+                mainBtn.style.pointerEvents = "none"; // スマホ録音ボタンを無効化
+            } else {
+                // PCモードOFF
+                btn.style.background = '#e2e8f0';
+                btn.style.color = '#475569';
+                btn.innerText = '💻 PC入力モード: OFF';
+                resultArea.contentEditable = "false";
+                resultArea.style.cursor = "default";
+                resultArea.style.background = "#fafafa";
+                resultArea.style.border = "2px solid var(--border-color)";
+                mainBtn.style.opacity = "1";
+                mainBtn.style.pointerEvents = "auto";
+            }
+        };
+
+        resultArea.addEventListener('input', () => {
+            if (!pcModeEnabled) return;
+            
+            finalTranscript = resultArea.innerText;
+            localStorage.setItem('req_backup_text', finalTranscript);
+            isNewLine = true; // PC入力後は次の音声認識も新しい行から始めることを想定
+
+            clearTimeout(pcTimer);
+            pcTimer = setTimeout(() => {
+                let currentText = resultArea.innerText;
+                let lctNoSpace = lastConfirmedText.replace(/\s/g, '');
+                let curNoSpace = currentText.replace(/\s/g, '');
+                
+                // 追加文字があり、既存の部分が一致しているか判定
+                if (curNoSpace.length > lctNoSpace.length && curNoSpace.startsWith(lctNoSpace)) {
+                    let lctClean = lastConfirmedText.trim();
+                    if (lctClean === "") {
+                        let newChunk = currentText.trim();
+                        if (newChunk.length > 0) insertTimestamp(newChunk, "");
+                    } else {
+                        let idx = currentText.lastIndexOf(lctClean);
+                        if (idx !== -1) {
+                            let newChunk = currentText.substring(idx + lctClean.length).trim();
+                            if (newChunk.length > 0) insertTimestamp(newChunk, lctClean + "\n");
+                        } else {
+                            lastConfirmedText = currentText;
+                        }
+                    }
+                } else {
+                    lastConfirmedText = currentText;
+                }
+            }, 3000);
+            
+            function insertTimestamp(newChunk, baseText) {
+                let updatedText = baseText + getTimestamp() + newChunk + "\n";
+                resultArea.innerText = updatedText;
+                lastConfirmedText = updatedText;
+                finalTranscript = updatedText;
+                localStorage.setItem('req_backup_text', updatedText);
+                
+                resultArea.focus();
+                if (typeof window.getSelection !== "undefined" && typeof document.createRange !== "undefined") {
+                    const range = document.createRange();
+                    range.selectNodeContents(resultArea);
+                    range.collapse(false);
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+                resultArea.scrollTop = resultArea.scrollHeight;
+            }
+        });
+        // ====================================================
+
     </script>
 </body>
 
