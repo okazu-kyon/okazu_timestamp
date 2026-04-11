@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="apple-touch-icon" href="icon.png">
-    <title>QQ Recorder REQ v2.5</title>
+    <title>QQ Recorder REQ v2.6</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -228,26 +228,28 @@
             border: 1px solid #7f1d1d;
         }
 
-        #gemini-btn {
-            background: linear-gradient(135deg, #1a73e8, #4285f4);
+        #ai-btn {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
             color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px;
+            border-radius: 16px;
             cursor: pointer;
-            font-weight: bold;
-            font-size: 0.95rem;
+            font-weight: 800;
+            font-size: 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
-            transition: transform 0.15s, box-shadow 0.15s;
+            gap: 10px;
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            margin: 5px 0;
         }
 
-        #gemini-btn:active {
-            transform: scale(0.97);
-            box-shadow: 0 2px 6px rgba(66, 133, 244, 0.3);
+        #ai-btn:active {
+            transform: scale(0.96);
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+            filter: brightness(1.1);
         }
 
         #toast {
@@ -273,6 +275,125 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
+
+        /* AI Selection Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .ai-modal-content {
+            background: var(--surface-color);
+            width: 85%;
+            max-width: 320px;
+            padding: 24px;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-align: center;
+        }
+
+        .modal-overlay.show .ai-modal-content {
+            transform: scale(1);
+        }
+
+        .ai-modal-content h3 {
+            margin-top: 0;
+            margin-bottom: 24px;
+            font-size: 1.2rem;
+            color: var(--text-color);
+            letter-spacing: -0.02em;
+        }
+
+        .ai-options {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .ai-opt-btn {
+            padding: 12px 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 800;
+            font-size: 1.05rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 16px;
+            color: white;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .ai-logo-box {
+            width: 42px;
+            height: 42px;
+            background: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .ai-logo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        .ai-opt-btn:active {
+            transform: scale(0.97);
+            filter: brightness(1.1);
+        }
+
+        .gemini-color {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border-left: 5px solid #4285f4;
+        }
+
+        .chatgpt-color {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border-left: 5px solid #10a37f;
+        }
+
+        .copilot-color {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border-left: 5px solid #ff5722;
+        }
+
+        .cancel-btn {
+            background: transparent;
+            color: #94a3b8;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+        }
     </style>
 </head>
 
@@ -281,13 +402,13 @@
         <div id="guide-box">
             <h2>QQ Recorder REQ</h2>
             <ul>
-                <li><strong>開始:</strong> 中央の赤ボタンで録音開始。再度押すと停止します。</li>
-                <li><strong>自動改行:</strong> 5秒間の沈黙を検知すると時刻を挿入して改行します。</li>
-                <li><strong>⚠️ 録音の注意:</strong>
-                    ブラウザのまま使用してください！iPhoneで「ホーム画面に追加」する場合は、必ず<strong>「Webアプリとして開く」の設定を【OFF】に</strong>してください（画面を閉じると録音が止まってしまいます）。
+                <li><strong>🔴 録音開始:</strong> 中央のボタンで開始します。再度押すと停止・保存されます。</li>
+                <li><strong>⏱️ 自動改行:</strong> 5秒間の沈黙を検知すると、時刻を挿入して自動で改行します。</li>
+                <li><strong>⚠️ iPhoneでの注意:</strong>
+                    「ホーム画面に追加」して使用する場合、必ず<strong>「Webアプリとして開く」の設定を【OFF】</strong>にしてください（ONだと画面を閉じた際に録音が止まってしまいます）。
                 </li>
-                <li><strong>✨ Gemini（AI）で開く:</strong> テキストをコピーしてGeminiを起動。活動記録を自動で整理・まとめてもらえます。</li>
-                <li><strong>🔒 個人情報保護:</strong> Geminiへ送る前に氏名・住所等の個人情報は自動で伏字になりますが、念のためAI送信前にご自身でも目視確認をお願いします。</li>
+                <li><strong>✨ AIで要約・整理:</strong> テキストをコピーして <strong>Gemini / ChatGPT / Copilot</strong> を選択して起動。活動記録の整理を自動化できます。</li>
+                <li><strong>🔒 個人情報保護:</strong> AI送信前に氏名・住所等は自動で伏字になりますが、念のため送信前にご自身でも内容の最終確認をお願いします。</li>
             </ul>
             <button id="close-guide">了解して使用を開始する</button>
         </div>
@@ -296,7 +417,7 @@
     <div class="container">
         <div class="header-section">
             <h1 id="header-title">QQ Recorder REQ</h1>
-            <div id="version-tag">v2.5</div>
+            <div id="version-tag">v2.6</div>
         </div>
         <div id="result-area"></div>
         <div class="controls">
@@ -309,14 +430,42 @@
                 <button class="sec-btn" id="save-txt-btn">💾 テキスト保存</button>
                 <button class="sec-btn" id="save-audio-btn">🎙️ 音声保存</button>
             </div>
-            <button id="gemini-btn">✨ Gemini（AI）で開く（テキストをコピー）</button>
+            <button id="ai-btn">✨ AIで要約・整理（コピーして起動）</button>
             <div class="action-row">
                 <button class="sec-btn" id="pc-mode-btn" style="background:var(--surface-color); color:var(--text-color);">💻 PC入力モード: OFF</button>
                 <button class="sec-btn" id="clear-btn">🗑️ すべて消去</button>
             </div>
         </div>
     </div>
-    <div id="toast">📋 コピーしました！Geminiに貼り付けてください</div>
+    <div id="toast">📋 コピーしました！AIに貼り付けてください</div>
+
+    <!-- AI選択用モーダル -->
+    <div id="ai-modal" class="modal-overlay">
+        <div class="ai-modal-content">
+            <h3>整理に使用するAIを選択</h3>
+            <div class="ai-options">
+                <button id="select-gemini" class="ai-opt-btn gemini-color">
+                    <div class="ai-logo-box">
+                        <img src="gemni.logo.png" alt="Gemini">
+                    </div>
+                    Gemini
+                </button>
+                <button id="select-chatgpt" class="ai-opt-btn chatgpt-color">
+                    <div class="ai-logo-box">
+                        <img src="chatGPT.logo.png" alt="ChatGPT">
+                    </div>
+                    ChatGPT
+                </button>
+                <button id="select-copilot" class="ai-opt-btn copilot-color">
+                    <div class="ai-logo-box">
+                        <img src="Copilot.png" alt="Copilot">
+                    </div>
+                    Microsoft Copilot
+                </button>
+            </div>
+            <button id="close-ai-modal" class="cancel-btn">キャンセル</button>
+        </div>
+    </div>
 
     <script>
         document.getElementById('close-guide').onclick = () => {
@@ -655,7 +804,7 @@
             a.download = `REQ_log_${getFileTimestamp()}.txt`; a.click();
         };
 
-        const GEMINI_PROMPT = `以下は、富山市消防局の救急隊が現場活動中に発した会話の音声文字起こしデータです。音声認識による誤変換・聞き取り不明瞭な箇所が含まれています。救急医療・消防の専門知識をもとに、下記の指示に従って整理・補正してください。
+        const AI_SUMMARY_PROMPT = `以下は、富山市消防局の救急隊が現場活動中に発した会話の音声文字起こしデータです。音声認識による誤変換・聞き取り不明瞭な箇所が含まれています。救急医療・消防の専門知識をもとに、下記の指示に従って整理・補正してください。
 
 【整理の指示】
 1. **誤変換の補正**：文脈から救急・消防用語や富山の地名として明らかに誤認識されている部分を適切に修正すること。
@@ -713,26 +862,44 @@
             return masked;
         }
 
-        document.getElementById('gemini-btn').onclick = async () => {
+        const aiModal = document.getElementById('ai-modal');
+        const aiBtn = document.getElementById('ai-btn');
+
+        aiBtn.onclick = () => {
             const text = resultArea.innerText;
             if (!text.trim()) return alert("テキストがありません");
+            aiModal.classList.add('show');
+        };
+
+        document.getElementById('close-ai-modal').onclick = () => {
+            aiModal.classList.remove('show');
+        };
+
+        const handleAISubmission = async (url) => {
+            const text = resultArea.innerText;
             const maskedText = maskPersonalInfo(text);
-            const fullText = GEMINI_PROMPT + maskedText;
+            const fullText = AI_SUMMARY_PROMPT + maskedText;
+            
             try {
                 await navigator.clipboard.writeText(fullText);
             } catch (e) {
-                // フォールバック
                 const ta = document.createElement('textarea');
                 ta.value = fullText; ta.style.position = 'fixed'; ta.style.opacity = '0';
                 document.body.appendChild(ta); ta.select();
                 document.execCommand('copy');
                 document.body.removeChild(ta);
             }
+
+            aiModal.classList.remove('show');
             const toast = document.getElementById('toast');
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 2800);
-            setTimeout(() => window.open('https://gemini.google.com/app', '_blank'), 400);
+            setTimeout(() => window.open(url, '_blank'), 400);
         };
+
+        document.getElementById('select-gemini').onclick = () => handleAISubmission('https://gemini.google.com/app');
+        document.getElementById('select-chatgpt').onclick = () => handleAISubmission('https://chatgpt.com/');
+        document.getElementById('select-copilot').onclick = () => handleAISubmission('https://copilot.microsoft.com/');
 
         document.getElementById('clear-btn').onclick = () => {
             if (confirm("すべて消去しますか？")) {
