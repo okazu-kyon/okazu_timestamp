@@ -763,8 +763,46 @@
                 document.body.classList.add('recording');
                 isNewLine = true;
             } catch (err) {
-                alert("マイクの取得に失敗しました。Bluetoothの接続を確認してください。");
-                console.error(err);
+                console.error("マイク取得エラー:", err.name, err.message);
+                let errorMsg = "";
+                switch (err.name) {
+                    case "NotAllowedError":
+                    case "PermissionDeniedError":
+                        errorMsg = "マイクの使用が許可されていません。\n\n"
+                            + "【許可する手順】\n"
+                            + "① アドレスバー左の鍵マーク(🔒)をタップ\n"
+                            + "② 「権限」または「サイトの設定」をタップ\n"
+                            + "③ 「マイク」を「許可」に変更\n"
+                            + "④ ページを再読み込みしてください";
+                        break;
+                    case "NotFoundError":
+                    case "DevicesNotFoundError":
+                        errorMsg = "マイクが見つかりません。\n\n"
+                            + "・端末にマイクが接続されているか確認してください\n"
+                            + "・Bluetoothイヤホンを使用する場合は、先にBluetooth接続を完了してからページを再読み込みしてください";
+                        break;
+                    case "NotReadableError":
+                    case "TrackStartError":
+                        errorMsg = "マイクが他のアプリで使用中か、アクセスできません。\n\n"
+                            + "・他の録音アプリや通話を終了してください\n"
+                            + "・Bluetoothイヤホンの場合は一度切断→再接続してからページを再読み込みしてください";
+                        break;
+                    case "OverconstrainedError":
+                        errorMsg = "マイクの設定が端末に対応していません。\n再読み込みして再度お試しください。";
+                        break;
+                    case "AbortError":
+                        errorMsg = "マイクの取得が中断されました。\nページを再読み込みして再度お試しください。";
+                        break;
+                    default:
+                        errorMsg = "マイクの取得に失敗しました。\n\n"
+                            + "以下をお試しください：\n"
+                            + "① ブラウザのマイク権限を確認（アドレスバー左の🔒をタップ）\n"
+                            + "② 他の録音アプリを終了\n"
+                            + "③ ページを再読み込み\n\n"
+                            + "（エラー詳細: " + err.name + "）";
+                        break;
+                }
+                alert(errorMsg);
             }
         }
 
