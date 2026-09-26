@@ -3,400 +3,676 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REQ Voice - 救急活動記録補助アプリ</title>
-    <!-- Web App & iOS Safe Area Settings -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="apple-touch-icon" href="icon.png">
+    <title>QQ Recorder REQ v2.6</title>
     <style>
         :root {
             --bg-color: #0f172a;
-            --surface-color: #1e293b;
-            --text-color: #f8fafc;
-            --text-sub: #94a3b8;
-            --primary: #ef4444;
-            --primary-hover: #dc2626;
-            --accent: #3b82f6;
+            --text-color: #f1f5f9;
+            --accent-color: #f87171;
             --border-color: #334155;
-            --safe-area-top: env(safe-area-inset-top, 0px);
-            --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
+            --surface-color: #1e293b;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
-            height: 100vh;
+            margin: 0;
+            padding: 16px;
             height: 100dvh;
             display: flex;
             flex-direction: column;
-            padding-top: var(--safe-area-top);
-            padding-bottom: var(--safe-area-bottom);
+            box-sizing: border-box;
             overflow: hidden;
+            touch-action: manipulation;
         }
 
-        /* 画面上部：ヘッダー */
-        header {
-            padding: 12px 16px;
-            background-color: var(--surface-color);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        h1 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            color: #f1f5f9;
-        }
-
-        /* 画面中央：テキスト表示エリア */
-        #result-container {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-
-        #result {
-            flex: 1;
-            white-space: pre-wrap;
-            font-size: 1.05rem;
-            line-height: 1.6;
-            color: var(--text-color);
-            user-select: text;
-            -webkit-user-select: text;
-            border-radius: 8px;
-            background: var(--surface-color);
-            padding: 16px;
-            border: 1px solid var(--border-color);
-            word-break: break-all;
-        }
-
-        #result:empty::before {
-            content: "録音ボタンを押して会話を開始してください...";
-            color: var(--text-sub);
-        }
-
-        /* 画面下部：コントロールエリア */
-        .controls {
-            padding: 16px;
-            background-color: var(--surface-color);
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .main-btn-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* 巨大録音ボタン */
-        #main-btn {
-            width: 100%;
-            height: 64px;
-            border-radius: 32px;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            font-size: 1.2rem;
-            font-weight: bold;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
-
-        #main-btn.active {
-            background-color: #f59e0b;
-            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(0.98);
-            }
-
-            100% {
-                transform: scale(1);
-            }
-        }
-
-        .sub-btn-group {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-        }
-
-        .btn-sub {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            padding: 10px 4px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            cursor: pointer;
-        }
-
-        .btn-sub:active {
-            background-color: var(--border-color);
-        }
-
-        /* モーダル表示 */
-        .modal-overlay {
+        #overlay {
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
             z-index: 1000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
         }
 
-        .modal-overlay.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .modal-content {
+        #guide-box {
             background: var(--surface-color);
-            padding: 24px;
-            border-radius: 16px;
             width: 85%;
-            max-width: 360px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            max-width: 400px;
+            padding: 24px;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
         }
 
-        .modal-title {
-            font-size: 1.1rem;
-            font-weight: bold;
-            text-align: center;
+        #guide-box h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        #guide-box ul {
+            padding-left: 20px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            margin: 15px 0;
+        }
+
+        #guide-box li {
             margin-bottom: 8px;
         }
 
-        .ai-select-btn {
+        #close-guide {
+            width: 100%;
             padding: 14px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-            background: var(--bg-color);
-            color: var(--text-color);
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
             font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+            height: 100%;
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        #header-title {
+            font-weight: 800;
+            font-size: 1.3rem;
+            margin: 0;
+            color: var(--accent-color);
+            letter-spacing: -0.02em;
+        }
+
+        #version-tag {
+            font-size: 0.7rem;
+            color: #94a3b8;
             font-weight: 600;
+            margin-top: -2px;
+            opacity: 0.8;
+        }
+
+        #result-area {
+            flex: 0 1 60%;
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            padding: 15px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            background: var(--surface-color);
+            color: var(--text-color);
+            box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding-bottom: 10px;
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(248, 113, 113, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0); }
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        .rec-indicator {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: var(--accent-color);
+            font-weight: 800;
+            font-size: 0.9rem;
+            margin-bottom: -10px;
+            letter-spacing: 0.1em;
+        }
+
+        .rec-dot {
+            width: 10px;
+            height: 10px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            animation: blink 1s infinite;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+
+        body.recording .rec-indicator {
+            display: flex;
+        }
+
+        #main-btn {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            border: none;
+            cursor: pointer;
+            align-self: center;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 8px 20px rgba(248, 113, 113, 0.4);
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+        }
+
+        #main-btn.active {
+            border-radius: 16px;
+            transform: scale(0.9);
+            background: #b91c1c;
+            animation: pulse-red 2s infinite;
+        }
+
+        .action-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .sec-btn {
+            background: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .sec-btn:active {
+            transform: scale(0.96);
+            background: var(--border-color);
+        }
+
+        #clear-btn {
+            background: #450a0a;
+            color: #fca5a5;
+            border: 1px solid #7f1d1d;
+        }
+
+        #ai-btn {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            margin: 5px 0;
         }
 
-        /* トースト通知 */
-        .toast {
+        #ai-btn:active {
+            transform: scale(0.96);
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+            filter: brightness(1.1);
+        }
+
+        #toast {
             position: fixed;
-            bottom: 100px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%) translateY(20px);
-            background: rgba(16, 185, 129, 0.9);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 0.9rem;
+            background: #f87171;
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 999px;
+            font-size: 0.85rem;
             font-weight: bold;
             opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
             pointer-events: none;
-            transition: all 0.3s ease;
-            z-index: 2000;
+            z-index: 9999;
+            white-space: nowrap;
+            box-shadow: 0 10px 20px rgba(248, 113, 113, 0.3);
         }
 
-        .toast.show {
+        #toast.show {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
+        }
+
+        /* AI Selection Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .ai-modal-content {
+            background: var(--surface-color);
+            width: 85%;
+            max-width: 320px;
+            padding: 24px;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-align: center;
+        }
+
+        .modal-overlay.show .ai-modal-content {
+            transform: scale(1);
+        }
+
+        .ai-modal-content h3 {
+            margin-top: 0;
+            margin-bottom: 24px;
+            font-size: 1.2rem;
+            color: var(--text-color);
+            letter-spacing: -0.02em;
+        }
+
+        .ai-options {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .ai-opt-btn {
+            padding: 12px 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 800;
+            font-size: 1.05rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 16px;
+            color: white;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .ai-logo-box {
+            width: 44px;
+            height: 44px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            padding: 4px;
+            box-sizing: border-box;
+        }
+
+        .ai-logo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .ai-opt-btn:active {
+            transform: scale(0.97);
+            filter: brightness(1.1);
+        }
+
+        .gemini-color {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border-left: 5px solid #4285f4;
+        }
+
+        .chatgpt-color {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border-left: 5px solid #10a37f;
+        }
+
+        .copilot-color {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border-left: 5px solid #ff5722;
+        }
+
+        .cancel-btn {
+            background: transparent;
+            color: #94a3b8;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
         }
     </style>
 </head>
 
 <body>
-
-    <header>
-        <h1>REQ Voice</h1>
-        <button id="pc-mode-btn" class="btn-sub" style="flex-direction: row; padding: 6px 12px;">💻 PC入力モード: OFF</button>
-    </header>
-
-    <div id="result-container">
-        <div id="result"></div>
-    </div>
-
-    <div class="controls">
-        <div class="main-btn-wrapper">
-            <button id="main-btn">
-                <span id="main-btn-icon">🎙️</span>
-                <span id="main-btn-text">録音開始</span>
-            </button>
-        </div>
-
-        <div class="sub-btn-group">
-            <button id="save-audio-btn" class="btn-sub">
-                <span>🎵</span>
-                <span>音声保存</span>
-            </button>
-            <button id="save-txt-btn" class="btn-sub">
-                <span>📄</span>
-                <span>テキスト保存</span>
-            </button>
-            <button id="ai-btn" class="btn-sub">
-                <span>🤖</span>
-                <span>AI要約</span>
-            </button>
-            <button id="clear-btn" class="btn-sub" style="color: #f87171;">
-                <span>🗑️</span>
-                <span>クリア</span>
-            </button>
+    <div id="overlay">
+        <div id="guide-box">
+            <h2>QQ Recorder REQ</h2>
+            <ul>
+                <li><strong>🔴 録音開始:</strong> 中央のボタンで開始します。再度押すと停止・保存されます。</li>
+                <li><strong>⏱️ 自動改行:</strong> 5秒間の沈黙を検知すると、時刻を挿入して自動で改行します。</li>
+                <li><strong>⚠️ iPhoneでの注意:</strong>
+                    「ホーム画面に追加」して使用する場合、必ず<strong>「Webアプリとして開く」の設定を【OFF】</strong>にしてください（ONだと画面を閉じた際に録音が止まってしまいます）。
+                </li>
+                <li><strong>✨ AIで要約・整理:</strong> テキストをコピーして <strong>Gemini / ChatGPT / Copilot</strong> を選択して起動。活動記録の整理を自動化できます。</li>
+                <li><strong>🔒 個人情報保護:</strong> AI送信前に氏名・住所等は自動で伏字になりますが、念のため送信前にご自身でも内容の最終確認をお願いします。</li>
+            </ul>
+            <p style="font-size: 0.55rem; color: #64748b; margin: 15px 0; border-top: 1px solid var(--border-color); padding-top: 10px; text-align: center; opacity: 0.8;">
+                ※ 記載されている製品名・ロゴ等は各社の商標または登録商標です。
+            </p>
+            <button id="close-guide">了解して使用を開始する</button>
         </div>
     </div>
 
-    <!-- AI選択モーダル -->
+    <div class="container">
+        <div class="header-section">
+            <h1 id="header-title">QQ Recorder REQ</h1>
+            <div id="version-tag">v2.6</div>
+        </div>
+        <div id="result-area"></div>
+        <div class="controls">
+            <div class="rec-indicator">
+                <div class="rec-dot"></div>
+                <span>RECORDING</span>
+            </div>
+            <button id="main-btn"></button>
+            <div class="action-row">
+                <button class="sec-btn" id="save-txt-btn">💾 テキスト保存</button>
+                <button class="sec-btn" id="save-audio-btn">🎙️ 音声保存</button>
+            </div>
+            <button id="ai-btn">✨ AIで要約・整理（コピーして起動）</button>
+            <div class="action-row">
+                <button class="sec-btn" id="pc-mode-btn" style="background:var(--surface-color); color:var(--text-color);">💻 PC入力モード: OFF</button>
+                <button class="sec-btn" id="clear-btn">🗑️ すべて消去</button>
+            </div>
+        </div>
+    </div>
+    <div id="toast">📋 コピーしました！AIに貼り付けてください</div>
+
+    <!-- AI選択用モーダル -->
     <div id="ai-modal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-title">送信先AIを選択</div>
-            <button id="select-gemini" class="ai-select-btn">
-                <span>✨</span> Gemini
-            </button>
-            <button id="select-chatgpt" class="ai-select-btn">
-                <span>🟢</span> ChatGPT
-            </button>
-            <button id="close-ai-modal" class="btn-sub" style="margin-top: 8px; padding: 10px;">キャンセル</button>
+        <div class="ai-modal-content">
+            <h3>整理に使用するAIを選択</h3>
+            <div class="ai-options">
+                <button id="select-gemini" class="ai-opt-btn gemini-color">
+                    <div class="ai-logo-box">
+                        <img src="gemni.logo.png" alt="Gemini">
+                    </div>
+                    Gemini
+                </button>
+                <button id="select-chatgpt" class="ai-opt-btn chatgpt-color">
+                    <div class="ai-logo-box">
+                        <img src="chatGPT.logo.png" alt="ChatGPT">
+                    </div>
+                    ChatGPT
+                </button>
+                <button id="select-copilot" class="ai-opt-btn copilot-color">
+                    <div class="ai-logo-box">
+                        <img src="Copilot.png" alt="Copilot">
+                    </div>
+                    Microsoft Copilot
+                </button>
+            </div>
+            <button id="close-ai-modal" class="cancel-btn">キャンセル</button>
         </div>
     </div>
-
-    <div id="toast" class="toast">クリップボードにコピーしました！</div>
 
     <script>
-        // ── 富山弁・固有地名・救急用語の辞書補正テーブル ──
-        const AUTO_CORRECT_MAP = {
-            '難病': '南病', '富山南': '南病', '南病院': '南病',
-            '市立': '市民', '市民病院': '市民',
-            '赤十字': '日赤', '富山赤十字': '日赤',
-            '県立': '中央', '中央病院': '中央',
-            '大学病院': '医科薬科', '富大': '医科薬科',
-            '労災': '労災', '済生会': '済生会',
-            '高志': '高志リハ',
-            'アルペン': 'アルペン',
-            'まちなか': 'まちなか',
-            '不二越': '不二越病院',
-            '水橋': '水橋',
-            '婦中': '婦中',
-            '八尾': '八尾',
-            '大沢野': '大沢野',
-            '細入': '細入',
-            '山田': '山田',
-            '呉羽': '呉羽',
-            '杉原': '杉原'
+        document.getElementById('close-guide').onclick = () => {
+            document.getElementById('overlay').style.display = 'none';
         };
 
         const TOYAMA_FORCE_DICT = {
-            '富山': '富山',
-            '総曲輪': 'そうがわ',
-            '新総曲輪': 'しんそうがわ',
-            '荒町': 'あらまち',
-            '西町': 'にしちょう',
-            '太田': 'おおた',
-            '堀川': 'ほりかわ',
-            '蜷川': 'にながわ',
-            '掛尾': 'かけお',
-            '黒瀬': 'くろせ',
-            '根塚': 'ねづか',
-            '布瀬': 'ふせ',
-            '二口': 'ふたくち',
-            '今泉': 'いまいずみ',
-            '泉町': 'いずみちょう',
-            '清水町': 'しみずちょう',
-            '山室': 'やまむろ',
-            '中川原': 'なかがわら',
-            '公園木町': 'こうえんきのまち',
-            '奥田': 'おくだ',
-            '窪': 'くぼ',
-            '下奥田': 'しもおくだ',
-            '粟島': 'あわじま',
-            '越前町': 'えちぜんまち',
-            '千石町': 'せんごくちょう',
-            '旅籠町': 'はたごまち',
-            '安野屋': 'やすのや',
-            '丸の内': 'まるのうち',
-            '大手町': 'おおてまち',
-            '本町': 'ほんまち',
-            '桜町': 'さくらまち',
-            '新富町': 'しんとみちょう',
-            '明輪町': 'めいりんちょう',
-            '牛島': 'うしじま',
-            '湊入船': 'みなとおりふね',
-            '北新町': 'きたしんまち',
-            '向川原': 'むかいがわら',
-            '東田地方': 'ひがしでんじがた',
-            '双代町': 'そうだいちょう',
-            '城村': 'じょうむら',
-            '開発': 'かいほつ',
-            '月岡': 'つきおか',
-            '上滝': 'かみだき',
-            '大庄': 'おおしょう'
+            "そうがわ": "総曲輪", "さがわ": "総曲輪", "ふちゅう": "婦中町", "やつお": "八尾町",
+            "ごふく": "五福", "みずはし": "水橋", "いわせ": "岩瀬", "いたがき": "板垣", "あざみ": "安住町",
+            "おおさわの": "大沢野", "おおやま": "大山", "ほそいり": "細入", "やまだ": "山田",
+            "ひゃくづか": "百塚", "におり": "荷織", "うわの": "上野", "ひらき": "開", "にいかわ": "新川",
+            "ありさわ": "有沢", "つきおか": "月岡", "しんじょう": "新庄", "くれは": "呉羽",
+            "たろうまる": "太郎丸", "ねづか": "根塚", "ぬのせ": "布瀬", "はね": "羽根", "いまいずみ": "今泉",
+            "ほりかわ": "堀川", "やまむろ": "山室", "たかやしろ": "高屋敷",
+            "にながわ": "蜷川", "あかだ": "赤田", "おおしま": "大島", "おおまち": "大町",
+            "かみだき": "上滝", "いのたに": "猪谷", "かにでら": "蟹寺", "あんようぼう": "安養寺",
+            "しんぼ": "新保", "あkiよし": "秋吉", "おおた": "太田", "はすまち": "蓮町", "こうよう": "光陽",
+            "ふたく口": "二口", "たばたけ": "田畠", "にしのみや": "西宮", "おくだ": "奥田", "とよタ": "豊田",
+            "ちゅうおうびょういん": "県立中央病院", "しみんびょういん": "富山市民病院", "せきじゅうじ": "富山赤十字病院",
+            "とみだい": "富山大学附属病院", "さいせいかい": "済生会富山病院",
+            "とやまろうさい": "富山労災病院", "かみいちびょういん": "上市総合病院", "なめりかわ": "滑川病院",
+            "やつおそうごうびょういん": "八尾総合病院", "まちなか": "まちなか病院",
+            "とやまりはびり": "富山リハビリテーションセンター", "とやまえき": "富山駅", "ふぁぼーれ": "ファボーレ",
+            "おーばーど": "オーバード・ホール", "しやくしょ": "富山市役所", "あぴた": "アピタ", "いおん": "イオン",
+            "ぐらんどぷらざ": "グランドプラザ", "とやまくうこう": "富山空港", "しっく": "CIC",
+            "あーぶい": "指揮車", "あーるしーえー": "心拍再開", "あいしーゆー": "集中治療室",
+            "あおたぐ": "軽症(緑)", "あかたぐ": "重症(赤)", "あくとぱるす": "AutoPulse",
+            "あどれなりん": "アドレナリン", "あなふぃら": "アナフィラキシー",
+            "あしもとちゅうい": "足元注意", "あっか": "状態悪化", "あっぱくしけつ": "圧迫止血",
+            "あっぺ": "虫垂炎", "あぷがー": "エーサップ", "あび": "救急車",
+            "あま": "急性心筋梗塞", "あんせい": "安静", "あんぜんかくにん": "安全確認",
+            "あんぷる": "AMPLE法", "いーあーる": "救急外来", "いちいちきゅう": "百十九番",
+            "いじ": "生命維持", "いちにゆうどうしんでんず": "12誘導心電図",
+            "いれうす": "腸閉塞", "いろう": "胃瘻", "いんとう": "咽頭",
+            "うぉーむぞーん": "ウォームゾーン", "うんてん": "緊急運転", "うそくよし": "右側よし",
+            "えーいーでぃー": "AED", "えあうえい": "エアウェイ", "えいちあーる": "HR",
+            "えし": "壊死", "えすぴーおーつー": "SpO2", "えぬきゅうごますく": "N95マスク",
+            "えぬえすえー": "狭心症", "えんじょう": "延焼", "えんちょうこーど": "延長コード",
+            "おうだん": "黄疸", "おうじゅ": "応需", "おうと": "嘔吐", "おしん": "悪心",
+            "おーとぱるす": "AutoPulse", "おーばー": "オーバー", "おーぴーきゅーあーるえすてぃー": "OPQRST法",
+            "かがくこきゅう": "下顎呼吸", "かがくたい": "化学隊", "かじょう": "下乗",
+            "かし": "下肢", "かふ": "カフ", "かふかん流": "灌流", "かかんき": "過換気症候群",
+            "かたい": "下腿", "かつどう": "作動確認", "かにゅーら": "鼻カニューラ",
+            "かにゅーれ": "カニューレ", "かぶ": "下部", "かんせんぼうご": "感染防護",
+            "かんそう": "転院搬送", "かんし": "持続監視", "かんぞう": "肝臓",
+            "かんつうしょう": "貫通傷", "がい": "臥位", "がいじどうしゅっけつ": "外耳道出血",
+            "がいしょうせいしょっく": "外傷性ショック", "がーぜ": "ガーゼ",
+            "がばん": "骨盤", "きかんいん": "運転員", "きかんそうかん": "気管挿管",
+            "ききゅう": "気胸", "きどう": "気道", "きどうかくほ": "気道確保",
+            "きどうねっしょう": "気道熱傷", "きどうへいそく": "気道閉塞", "きにょう": "既往",
+            "きゅういん": "吸引", "きゅうきゅうきゅうめいし": "救命士",
+            "きゅうきゅうこうじょう": "救急向上", "きゅうきゅうしれい": "救急指令",
+            "きゅうきゅうしんそう": "救急真相", "きゅうきゅうてちょう": "救急手帳",
+            "きゅうきゅうばこ": "救急箱", "きゅうきゅうばさみ": "救急鋏",
+            "きゅうきゅうたい": "救急隊", "きゅうじょ": "救助", "きゅうじょたい": "救助隊",
+            "きゅうじょしゃ": "救助車", "きょじょう": "挙上", "きょけつ": "虚血",
+            "きたぐ": "中等症(黄)", "きんきゅうそうこう": "緊急走行",
+            "きんこーちょく": "筋硬直", "きんちょうききゅう": "緊張性気胸",
+            "ぎし": "義歯", "ぎゃくとれんでれんぶるぐ": "逆トレンデレンブルグ位",
+            "くうしゃ": "空車", "くっきょく": "屈曲", "くもん": "肛門",
+            "くらっしゅしょうこうぐん": "クラッシュ症候群", "くんしょう": "燻焼",
+            "けいかい": "警戒", "けいかんえいよう": "経管栄養",
+            "けいこうえあうえい": "経口エアウェイ", "けいけつ": "喀血",
+            "けいびえあうえい": "経鼻エアウェイ", "けいれん": "痙攣",
+            "けいしょう": "警鐘", "けいつい": "頸椎", "けっさつ": "結紮",
+            "けっとうそくてい": "血糖測定", "けっとうち": "血糖値", "けつえき": "血液",
+            "けつまくそうはく": "結膜蒼白", "けんいん": "牽引", "けんさく": "検索",
+            "げけつ": "下血", "げんかく": "現確", "げんちゃく": "現着",
+            "げんぱしきしすてむ": "現場指揮システム(ICS)", "こうあつさんそ": "高圧酸素",
+            "こうくうきかさい": "航空機火災", "こうくうたい": "航空隊",
+            "こうほうよし": "後方よし", "こうもん": "肛門", "こうとう": "喉頭",
+            "こうとうきょう": "喉頭鏡", "こうとうぶ": "後頭部",
+            "こーるとぞーん": "コールドゾーン", "こてい": "固定",
+            "こていてーぷ": "固定テープ", "こっせつ": "骨折", "こつばん": "骨盤",
+            "さーじかるますく": "サージカルマスク", "さいれん": "サイレン",
+            "さっそう": "擦創", "さふすとれっちゃー": "サブストレッチャー",
+            "さむすぷりんと": "サムスプリント", "さそくよし": "左側よし",
+            "さあ": "くも膜下出血", "しーあーるてぃー": "CRT",
+            "しーからー": "ネックカラー", "しーぱ": "心肺停止",
+            "しーぱおわ": "到着時心肺停止", "しーぶいでぃー": "脳血管障害",
+            "しきいかん": "指揮官", "しきほんぶ": "指揮本部", "しけったい": "止血帯",
+            "しし": "四肢", "ししゅう": "周囲状況", "しぜん": "除染",
+            "しそ": "自訴", "しそう": "刺創", "しっきん": "失禁",
+            "してん": "死斑", "しつむ": "執務", "しでんず": "心電図",
+            "しにゅう": "進入", "しぼう": "自己死", "しびれ": "痺れ",
+            "しゃりょう": "車両", "しゃりょうかさい": "車両火災",
+            "しゅうよう": "収容", "しゅっどう": "出動", "しゅそ": "主訴",
+            "しゅどう": "手動", "しょうか": "消火", "しょうちょう": "小腸",
+            "しょうめんしょうとつ": "正面衝突", "しょくいん": "消防職員",
+            "しょくどう": "食道", "しようずみきざい": "使用済み機材",
+            "しんぞう": "心臓", "しんしつさいどう": "心室細動",
+            "しんしつひんみゃく": "心室頻脈", "しんしんそうしつ": "心神喪失",
+            "しんたんぽ": "心タンポナーデ", "しんていし": "心停止",
+            "しんてん": "伸展", "しんどう": "車両振動", "しんふぜん": "心不全",
+            "しんぼうさいどう": "心房細動", "じえん": "支援", "じえんたい": "支援隊",
+            "じーしーえーす": "GCS", "じこし": "自己死", "じそ": "自訴",
+            "じそん": "自損", "じぞくかんし": "持続監視", "じどう": "自動",
+            "じゃーる": "J", "じゅーる": "J", "じゅうたい": "渋滞",
+            "じゅうにしちょう": "十二指腸", "じゅうねん": "充電", "じょさいどう": "除細動",
+            "じょさいどうき": "除細動器", "じょさいどうぱっど": "除細動パッド",
+            "じょせん": "除染", "じょみゃく": "徐脈", "じょうし": "上肢",
+            "じょうしゃ": "乗車", "じょうたい": "上腿", "じょうほうこうしん": "情報更新",
+            "じょうみゃく": "静脈", "じょうみゃくろかくほ": "静脈路確保",
+            "じょうぱく": "上腕", "じょうわん": "上腕", "すいげん": "水源",
+            "すいなん": "水難", "すいなんきゅうじょたい": "水難救助隊",
+            "すいぞう": "膵臓", "すくーぷすとれっちゃー": "スクープストレッチャー",
+            "すたいれっと": "スタイレット", "すとれっちゃー": "ストレッチャー",
+            "すとれーとがたきかんきょう": "ストレート型気管鏡",
+            "すてあけーす": "階段担架", "すていあんどぷれい": "ステイアンドプレイ",
+            "すーぱーあんびゅらんす": "大規模災害救急車",
+            "せいしょ": "生理食塩水", "せいそう": "清掃", "せいび": "整備",
+            "せいもん": "声門", "せいもんじょうでばいす": "声門上デバイス",
+            "せきしょくとう": "赤色灯", "せっそう": "切創", "せつぞく": "接続",
+            "せんけつ": "鮮血", "せんてい": "選定", "せんぴょうせいこきゅう": "浅表性呼吸",
+            "せんぱくかさい": "船舶火災", "ぜんかいじょ": "全介助", "ぜんそく": "喘息",
+            "ぜんとうぶ": "前頭部", "ぜんぱく": "前腕", "ぜんぱくよし": "前方よし",
+            "ぜんぽうよし": "前方よし", "ぜんしょう": "全焼",
+            "ぜっこんちんか": "舌根沈下", "ぜんめい": "喘鳴", "ぞーにんぐ": "ゾーニング",
+            "たいえき": "体液", "たいかん": "体幹", "たいかんこてい": "体幹固定",
+            "たいこうはんしゃ": "対光反射", "たいどう": "体動",
+            "たいりょうしょうびょうしゃ": "大量傷病者", "たいりゅう": "対流",
+            "たいいん": "救急隊員", "たいちょう": "救急隊長", "たそ": "他訴",
+            "たはつがいしょう": "多発外傷", "たてものかさい": "建物火災",
+            "たん": "痰", "だいたいこつ": "大腿骨", "だっすい": "脱水",
+            "だっきゅう": "脱臼", "だぼく": "打撲", "ちあ": "チアノーゼ",
+            "ちんあつ": "鎮圧", "ちんか": "鎮火", "ちゅうにゅう": "注入",
+            "ちゅうどく": "中毒", "ちょきん": "直近", "ちょっきん": "直近",
+            "ちょくちょう": "直腸", "ちょうしんき": "聴診器",
+            "ついたつ": "追突", "つうしんいん": "通信員",
+            "ていけっとう": "低血糖", "ていせき": "車両渋滞", "ていたいおん": "低体温症",
+            "ていし": "緊急停止", "てぶくろ": "手袋", "てんいん": "転院搬送",
+            "てんかんほっさ": "てんかん発作", "てんけん": "点検", "てんじょうよし": "天井よし",
+            "てんとう": "転倒", "てんてき": "点滴", "てんらく": "転落",
+            "でぃーまっと": "DMAT", "でぃーぱっと": "DPAT",
+            "どうこう": "瞳孔", "どうみゃく": "動脈", "どくかー": "ドクターカー",
+            "どくへり": "ドクターヘリ", "どこへり": "ドクターヘリ", "どっぽ": "独歩",
+            "といぜん": "筒先", "とうかい": "倒壊", "とけつ": "吐血",
+            "とくていこうい": "特定行為", "とくめい": "特命", "とりあーじ": "トリアージ",
+            "とりあーじたっぐ": "トリアージタッグ",
+            "ないふく": "内服", "にょうかてーてる": "尿カテ", "ぬのたんか": "布担架",
+            "ねぶらいざー": "ネブライザー", "ねんざ": "捻挫", "ねっしょう": "熱傷",
+            "ねっちゅうしょう": "熱中症", "のうこうそく": "脳梗塞", "のうしゅっけつ": "脳出血",
+            "はいえん": "肺炎/排煙", "はいがい": "背臥位", "はいぶつう": "背部痛",
+            "はいぱーれすきゅー": "消防救助機動部隊", "はかい": "破壊", "はしごたい": "はしご隊",
+            "はつでんき": "発電機", "はなかにゅーら": "鼻カニューラ", "はりすてぼっくす": "針捨てボックス",
+            "はんしゃ": "反射", "はんしょう": "半焼", "ばいおはざーど": "バイオハザード",
+            "ばっぐばるぶますく": "BVM", "ばっくどらふと": "バックドラフト", "ばっくぼーど": "バックボード",
+            "ばんそうこう": "絆創膏", "ぱっと": "PAT法", "ひかしゅっけつ": "皮下出血",
+            "ひきあげ": "引揚", "ひきつぎ": "引継ぎ", "ひぞう": "脾臓",
+            "ひんみゃく": "頻脈", "ひもと": "火元", "ひえん": "飛炎",
+            "びーぴー": "BP", "びーてぃー": "BT", "びしゅっけつ": "鼻出血",
+            "びょうたい": "病態", "ぴーぴーいー": "PPE",
+            "ぴーあーる": "PR", "ぴーは": "P波",
+            "ふおん": "不穏", "ふくがい": "腹臥位", "ふくしゃ": "輻射",
+            "ふくしゃねつ": "輻射熱", "ふくすい": "腹水", "ふずいいてき": "不随意的",
+            "ふはんそう": "不搬送", "ふへん": "状態不変", "ふけい": "浮腫",
+            "ふらっしゅおーばー": "フラッシュオーバー", "ふんしゅつせいしゅっけつ": "噴出性出血",
+            "ふぇいすしーるど": "フェイスシールド", "ぶーいむ": "BVM",
+            "ぷれあらいばる": "プレアライバル", "ぺんらいと": "ペンライト",
+            "ほうたい": "包帯", "ほうすい": "放水", "ほうねつ": "放熱",
+            "ほおん": "保温", "ほきき": "補聴器", "ほじょいん": "補助員",
+            "ほっとぞーん": "ホットゾーン", "ほっとらいん": "ホットライン",
+            "ぼうごえぷろん": "防護エプロン", "ぼうごごーぐる": "防護ゴーグル",
+            "ぼうこう": "膀胱", "ぼるてーじ": "電圧",
+            "まき": "麻痺", "まきん": "マッキントッシュ型", "まっきんとっしゅがた": "マッキントッシュ型",
+            "まっしょう": "満床", "まひ": "麻痺", "まんしぇっと": "マンシェット",
+            "まんしょう": "満床", "みどりたぐ": "軽症(緑)", "むみゃくせい": "無脈性電気活動",
+            "めいんすとれっちゃー": "メインストレッチャー", "めいりょう": "明瞭",
+            "めがね": "眼鏡", "めまい": "眩暈", "めでぃかるこんとろーる": "メディカルコントロール",
+            "めんたい": "面体", "もうふ": "毛布", "もにたーかんさつ": "モニター観察",
+            "やくざいちゅうにゅう": "薬剤注入", "ゆえき": "輸液", "ゆそう": "患者輸送",
+            "ゆそう": "患者輸送", "ようつい": "腰椎", "よし": "指差喚呼",
+            "らりんじあるますく": "LMA", "らくか": "落下", "りざーばーますく": "リザーバーマスク",
+            "りさい": "罹災", "りだん": "離断", "りゃくしょう": "略焼",
+            "りゅうぜん": "流涎", "りょうかい": "了解", "りんやかさい": "林野火災",
+            "るーかす": "LUCAS", "るーと": "静脈路", "るーとこてい": "ルート固定",
+            "れいかん": "冷汗", "れきしゃ": "轢過", "れっそう": "裂創",
+            "ろーどあんどごー": "ロードアンドゴー", "ろすく": "自己心拍再開"
         };
 
-        let mediaRecorder = null;
-        let audioChunks = [];
-        let recognition = null;
-        let activeStream = null;
-        let finalTranscript = '';
-        let isNewLine = true;
+        const AUTO_CORRECT_MAP = {
+            "相川": "総曲輪", "早川": "総曲輪", "府中": "婦中町", "八百": "八尾町", "五服": "五福"
+        };
+
+        let recognition, mediaRecorder, audioChunks = [];
         let silenceTimer = null;
+        let finalTranscript = localStorage.getItem('req_backup_text') || "";
+        let isNewLine = true;
+        let activeStream = null;
 
+        const resultArea = document.getElementById('result-area');
         const mainBtn = document.getElementById('main-btn');
-        const mainBtnText = document.getElementById('main-btn-text');
-        const mainBtnIcon = document.getElementById('main-btn-icon');
-        const resultArea = document.getElementById('result');
 
-        // ページ読み込み時にバックアップからテキストを復元
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedText = localStorage.getItem('req_backup_text');
-            if (savedText) {
-                finalTranscript = savedText;
-                resultArea.innerText = savedText;
-                resultArea.scrollTop = resultArea.scrollHeight;
+        // ページ読み込み時にバックアップがあれば自動で復元
+        if (finalTranscript) {
+            resultArea.innerText = finalTranscript;
+        }
+
+        // 録音中の誤操作による再読み込みやタブ閉鎖を防ぐための警告
+        window.addEventListener('beforeunload', (e) => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                e.preventDefault();
+                e.returnValue = '';
             }
         });
 
@@ -663,8 +939,9 @@
             setTimeout(() => window.open(url, '_blank'), 400);
         };
 
-         document.getElementById('select-gemini').onclick = () => handleAISubmission('https://gemini.google.com/app?hl=ja');
-         document.getElementById('select-chatgpt').onclick = () => handleAISubmission('https://chatgpt.com/');
+    　　　　　document.getElementById('select-gemini').onclick = () => handleAISubmission('https://gemini.google.com/app?hl=ja');
+   　　　　　 document.getElementById('select-chatgpt').onclick = () => handleAISubmission('https://chatgpt.com/?temporary-chat=true');
+   　　　　　 document.getElementById('select-copilot').onclick = () => handleAISubmission('https://copilot.microsoft.com/?mode=geneasy');
 
         document.getElementById('clear-btn').onclick = () => {
             if (confirm("すべて消去しますか？")) {
