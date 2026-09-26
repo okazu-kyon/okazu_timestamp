@@ -365,7 +365,7 @@
             '新富町': 'しんとみちょう',
             '明輪町': 'めいりんちょう',
             '牛島': 'うしじま',
-            '湊入船': 'みなといりふね',
+            '湊入船': 'みなとおりふね',
             '北新町': 'きたしんまち',
             '向川原': 'むかいがわら',
             '東田地方': 'ひがしでんじがた',
@@ -645,7 +645,7 @@
             const text = resultArea.innerText;
             const maskedText = maskPersonalInfo(text);
             const fullText = AI_SUMMARY_PROMPT + maskedText;
-
+            
             try {
                 await navigator.clipboard.writeText(fullText);
             } catch (e) {
@@ -663,8 +663,8 @@
             setTimeout(() => window.open(url, '_blank'), 400);
         };
 
-        document.getElementById('select-gemini').onclick = () => handleAISubmission('https://gemini.google.com/app?hl=ja');
-        document.getElementById('select-chatgpt').onclick = () => handleAISubmission('https://chatgpt.com/');
+         document.getElementById('select-gemini').onclick = () => handleAISubmission('https://gemini.google.com/app?hl=ja');
+         document.getElementById('select-chatgpt').onclick = () => handleAISubmission('https://chatgpt.com/');
 
         document.getElementById('clear-btn').onclick = () => {
             if (confirm("すべて消去しますか？")) {
@@ -697,7 +697,7 @@
                 resultArea.style.border = "2px solid #3b82f6";
                 lastConfirmedText = resultArea.innerText;
                 resultArea.focus();
-
+                
                 // 録音中なら停止
                 if (mediaRecorder && mediaRecorder.state === "recording") {
                     stopRecording();
@@ -720,7 +720,7 @@
 
         resultArea.addEventListener('input', () => {
             if (!pcModeEnabled) return;
-
+            
             finalTranscript = resultArea.innerText;
             localStorage.setItem('req_backup_text', finalTranscript);
             isNewLine = true; // PC入力後は次の音声認識も新しい行から始めることを想定
@@ -730,7 +730,7 @@
                 let currentText = resultArea.innerText;
                 let lctNoSpace = lastConfirmedText.replace(/\s/g, '');
                 let curNoSpace = currentText.replace(/\s/g, '');
-
+                
                 // 追加文字があり、既存の部分が一致しているか判定
                 if (curNoSpace.length > lctNoSpace.length && curNoSpace.startsWith(lctNoSpace)) {
                     let lctClean = lastConfirmedText.trim();
@@ -750,14 +750,14 @@
                     lastConfirmedText = currentText;
                 }
             }, 3000);
-
+            
             function insertTimestamp(newChunk, baseText) {
                 let updatedText = baseText + getTimestamp() + newChunk + "\n";
                 resultArea.innerText = updatedText;
                 lastConfirmedText = updatedText;
                 finalTranscript = updatedText;
                 localStorage.setItem('req_backup_text', updatedText);
-
+                
                 resultArea.focus();
                 if (typeof window.getSelection !== "undefined" && typeof document.createRange !== "undefined") {
                     const range = document.createRange();
