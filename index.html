@@ -939,9 +939,9 @@
             setTimeout(() => window.open(url, '_blank'), 400);
         };
 
-    　　　　　document.getElementById('select-gemini').onclick = () => handleAISubmission('https://gemini.google.com/app');
+    　　　　　document.getElementById('select-gemini').onclick = () => handleAISubmission('https://gemini.google.com/app?hl=ja');
    　　　　　 document.getElementById('select-chatgpt').onclick = () => handleAISubmission('https://chatgpt.com/?temporary-chat=true');
-   　　　　　 document.getElementById('select-copilot').onclick = () => handleAISubmission('https://copilot.microsoft.com/');
+   　　　　　 document.getElementById('select-copilot').onclick = () => handleAISubmission('https://copilot.microsoft.com/?mode=geneasy');
 
         document.getElementById('clear-btn').onclick = () => {
             if (confirm("すべて消去しますか？")) {
