@@ -460,13 +460,7 @@
                     </div>
                     ChatGPT
                 </button>
-                <button id="select-copilot" class="ai-opt-btn copilot-color">
-                    <div class="ai-logo-box">
-                        <img src="Copilot.png" alt="Copilot">
                     </div>
-                    Microsoft Copilot
-                </button>
-            </div>
             <button id="close-ai-modal" class="cancel-btn">キャンセル</button>
         </div>
     </div>
@@ -941,8 +935,7 @@
 
     　　　　　document.getElementById('select-gemini').onclick = () => handleAISubmission('https://gemini.google.com/app?hl=ja');
    　　　　　 document.getElementById('select-chatgpt').onclick = () => handleAISubmission('https://chatgpt.com/?temporary-chat=true');
-   　　　　　 document.getElementById('select-copilot').onclick = () => handleAISubmission('https://copilot.microsoft.com/?mode=geneasy');
-
+   
         document.getElementById('clear-btn').onclick = () => {
             if (confirm("すべて消去しますか？")) {
                 resultArea.innerText = ''; finalTranscript = ''; audioChunks = []; isNewLine = true;
